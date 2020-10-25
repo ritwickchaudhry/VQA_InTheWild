@@ -6,7 +6,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from torch.utils.data import DataLoader
-from IPython.core.debugger import Pdb
+import pdb
+from pdb import set_trace as bp
 
 from preprocess import preprocess
 from dataset import VQADataset, VQABatchSampler
@@ -62,10 +63,10 @@ def main(config):
     # add model parameters to config
     config['model']['params']['vocab_size'] = len(ques_vocab)
     config['model']['params']['output_size'] = len(ans_vocab) - 1   # -1 as don't want model to predict '<unk>'
-    config['model']['params']['exatract_img_features'] = 'preprocess' in config['data']['images'] and config['data']['images']['preprocess']
+    config['model']['params']['extract_img_features'] = 'preprocess' in config['data']['images'] and config['data']['images']['preprocess']
     # which features dir? test, train or validate?
     config['model']['params']['features_dir'] = os.path.join(
-        config['data']['dir'], config['data']['test']['emb_dir'])
+       config['data']['dir'], config['data']['train']['emb_dir'])
     if config['model']['type'] == 'vqa':
         model = VQAModel(mode=config['mode'], **config['model']['params'])
     elif config['model']['type'] == 'san':
@@ -83,7 +84,7 @@ def main(config):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                **config['optim']['params'])
 
-        best_acc = 0
+    best_acc = 0
     # Pdb().set_trace()
     startEpoch = 0
     if 'reload' in config['model']:
@@ -114,7 +115,7 @@ def main(config):
 
         print("begin training")
         model = train_model(model, dataloaders, criterion, optimizer, exp_lr_scheduler, save_dir,
-                            num_epochs=config['optim']['n_epochs'], use_gpu=config['use_gpu'], best_accuracy=best_acc, start_epoch=startEpoch)
+                            num_epochs=config['training']['no_of_epochs'], use_gpu=config['use_gpu'], best_accuracy=best_acc, start_epoch=startEpoch)
     elif config['mode'] == 'test':
         outputfile = os.path.join(save_dir, config['mode'] + ".json")
         test_model(model, dataloaders['test'], VQADataset.ans_vocab,
@@ -134,3 +135,9 @@ if __name__ == '__main__':
     torch.manual_seed(config['seed'])
     torch.cuda.manual_seed(config['seed'])
     main(config)
+
+'''
+{'train': 248349, 'val': 121512}
+ques vocab size: 22227
+ans vocab size: 1001
+'''

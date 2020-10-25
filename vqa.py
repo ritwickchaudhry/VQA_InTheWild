@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-import utils
+# import utils
 import torch.nn.functional as F
 
 from IPython.core.debugger import Pdb

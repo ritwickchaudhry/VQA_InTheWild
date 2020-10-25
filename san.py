@@ -1,9 +1,11 @@
 # ref: https://github.com/zcyang/imageqa-san/blob/master/src/san_att_lstm_twolayer_theano.py
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-import utils
-from IPython.core.debugger import Pdb
+# import utils
+import pdb
+from pdb import set_trace as bp
 
 
 class ImageEmbedding(nn.Module):
@@ -26,13 +28,15 @@ class ImageEmbedding(nn.Module):
 
     def forward(self, image, image_ids):
         # Pdb().set_trace()
-        if not self.extract_features:
+        if self.extract_features:
             # N * 224 * 224 -> N * 512 * 14 * 14
             image = self.cnn(image)
             # N * 512 * 14 * 14 -> N * 512 * 196 -> N * 196 * 512
             image = image.view(-1, 512, 196).transpose(1, 2)
             if self.features_dir is not None:
-                utils.save_image_features(image, image_ids, self.features_dir)
+                for i in range(len(image_ids)):
+                    path = '{}/{}.pth'.format(self.features_dir, image_ids[i])
+                    torch.save(image[i:i+1,:,:], path)
         # N * 196 * 512 -> N * 196 * 1024
         image_embedding = self.fc(image)
         return image_embedding
@@ -86,7 +90,7 @@ class SANModel(nn.Module):
         super(SANModel, self).__init__()
         self.mode = mode
         self.features_dir = features_dir
-        self.image_channel = ImageEmbedding(output_size=emb_size, mode=mode, extract_img_features=extract_img_features,
+        self.image_channel = ImageEmbedding(output_size=emb_size, mode=mode, extract_features=extract_img_features,
                                             features_dir=features_dir)
 
         self.word_emb_size = word_emb_size

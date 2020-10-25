@@ -3,7 +3,8 @@ import pickle
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-from IPython.core.debugger import Pdb
+import pdb
+from pdb import set_trace as bp
 import numpy as np
 
 
@@ -51,7 +52,7 @@ class VQADataset(torch.utils.data.Dataset):
             img = img.convert('RGB')
             img = self.transforms(img)
         else:
-            img = torch.load('{}/{}/{}'.format(self.data_dir, self.img_dir, imgid))
+            img = torch.load('{}/{}/{}.pth'.format(self.data_dir, self.img_dir, imgid))
         return torch.from_numpy(ques), img, imgid, ans, ques_id
 
 
@@ -92,7 +93,7 @@ class RandomSampler:
         return iter(self.ind)
 
     def __len__(self):
-        return len(self.ind)
+        return len(self.lengths)
 
 class VQABatchSampler:
     def __init__(self, data_source, batch_size, drop_last=False):
