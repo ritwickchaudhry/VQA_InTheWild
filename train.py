@@ -3,12 +3,14 @@ import time
 from tensorboardX import SummaryWriter
 import torch
 from torch.autograd import Variable
-from IPython.core.debugger import Pdb
+import pdb
+from pdb import set_trace as bp
 from scheduler import CustomReduceLROnPlateau
 import json
+from tqdm import tqdm
 
 
-def train(model, dataloader, criterion, optimizer, use_gpu=False):
+def train(epoch, model, dataloader, criterion, optimizer, use_gpu=False):
     model.train()  # Set model to training mode
     running_loss = 0.0
     running_corrects = 0
@@ -16,32 +18,39 @@ def train(model, dataloader, criterion, optimizer, use_gpu=False):
     step = 0
     # Pdb().set_trace()
     # Iterate over data.
-    for questions, images, image_ids, answers, ques_ids in dataloader:
-        # print('questions size: ', questions.size())
-        if use_gpu:
-            questions, images, image_ids, answers = questions.cuda(), images.cuda(), image_ids.cuda(), answers.cuda()
-        questions, images, answers = Variable(questions).transpose(0, 1), Variable(images), Variable(answers)
+    with tqdm(total=len(dataloader),desc='Train Epoch#{}'.format(epoch + 1)) as t:
+        for questions, images, image_ids, answers, ques_ids in dataloader:
+            # print('questions size: ', questions.size())
+            if use_gpu:
+                questions, images, image_ids, answers = questions.cuda(), images.cuda(), image_ids.cuda(), answers.cuda()
+            questions, images, answers = Variable(questions).transpose(0, 1), Variable(images), Variable(answers)
 
-        # zero grad
-        optimizer.zero_grad()
-        ans_scores = model(images, questions, image_ids)
-        _, preds = torch.max(ans_scores, 1)
-        loss = criterion(ans_scores, answers)
+            # zero grad
+            optimizer.zero_grad()
+            ans_scores = model(images, questions, image_ids)
+            _, preds = torch.max(ans_scores, 1)
+            loss = criterion(ans_scores, answers)
 
-        # backward + optimize
-        loss.backward()
-        optimizer.step()
+            # backward + optimize
+            loss.backward()
+            optimizer.step()
 
-        # statistics
-        running_loss += loss.data[0]
-        running_corrects += torch.sum((preds == answers).data)
-        example_count += answers.size(0)
-        step += 1
-        if step % 5000 == 0:
-            print('running loss: {}, running_corrects: {}, example_count: {}, acc: {}'.format(
-                running_loss / example_count, running_corrects, example_count, (float(running_corrects) / example_count) * 100))
-        # if step * batch_size == 40000:
-        #     break
+            # statistics
+            running_loss += loss.data
+            running_corrects += torch.sum((preds == answers).data)
+            example_count += answers.size(0)
+            step += 1
+            # if step % 5000 == 0:
+            #     print('running loss: {}, running_corrects: {}, example_count: {}, acc: {}'.format(
+            #         running_loss / example_count, running_corrects, example_count, (float(running_corrects) / example_count) * 100))
+            # if step * batch_size == 40000:
+            #     break
+            t.set_postfix({'running loss': running_loss / example_count, 
+                          'running_corrects': running_corrects, 
+                          'example_count': example_count, 
+                          'acc': (float(running_corrects) / example_count)})
+            t.update(1) 
+
     loss = running_loss / example_count
     acc = (running_corrects / len(dataloader.dataset)) * 100
     print('Train Loss: {:.4f} Acc: {:2.3f} ({}/{})'.format(loss,
@@ -90,7 +99,7 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, save_dir, 
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
         train_begin = time.time()
-        train_loss, train_acc = train(
+        train_loss, train_acc = train(epoch,
             model, data_loaders['train'], criterion, optimizer, use_gpu)
         train_time = time.time() - train_begin
         print('Epoch Train Time: {:.0f}m {:.0f}s'.format(

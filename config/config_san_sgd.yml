@@ -1,31 +1,31 @@
 prefix: san_sgd
 verbose: True
 mode: 'train'
-save_dir: 'scratch/vqa/san_sgd_0.01'
-use_gpu: True
+save_dir: './vqa/san_sgd_0.01'
+use_gpu: False
 debug: False
 seed: 123213
 data:
     preprocess: False
-    dir: '/home/cse/phd/csz178058/scratch/vqadata/'
+    dir: '/Users/tiffanyma/Documents/Fall 20/10-417 Deep Learning/project/'
     train:
-        ques: 'v2_OpenEnded_mscoco_train2014_questions.json'
-        ans: 'v2_mscoco_train2014_annotations.json'
+        ques: 'Questions_Train_mscoco/MultipleChoice_mscoco_train2014_questions.json'
+        ans: 'mscoco_train2014_annotations.json'
         img_dir: 'train2014'
         emb_dir: 'train2014_san_i_1024_448_vgg'
         batch_size: 32
     val:
-        ques: 'v2_OpenEnded_mscoco_val2014_questions.json'
-        ans: 'v2_mscoco_val2014_annotations.json'
+        ques: 'MultipleChoice_mscoco_val2014_questions.json'
+        ans: 'mscoco_val2014_annotations.json'
         img_dir: 'val2014'
-        emb_dir: 'train2014_san_i_1024_448_vgg'
+        emb_dir: 'val2014_san_i_1024_448_vgg'
         batch_size: 32
     images:
         preprocess: True
         scale: [448,448]
         crop: 448
     loader: 
-        workers: 4
+        workers: 0
         pin_memory: True
 
 model:
@@ -35,7 +35,7 @@ model:
         emb_size: 1024
         # ques_channel_type: 'DEEPLSTM'
         att_ff_size: 512
-        num_att_layers: 1
+        num_att_layers: 2
     reload: 'checkpoints.pth.tar'
 
 optim:
