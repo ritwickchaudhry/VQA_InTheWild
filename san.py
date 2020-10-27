@@ -19,8 +19,8 @@ class ImageEmbedding(nn.Module):
         for param in self.cnn.parameters():
             param.requires_grad = False
         self.fc = nn.Sequential(
-            nn.Linear(512, output_size),
-            nn.Tanh())
+            nn.Linear(2048, output_size),
+            nn.ReLU())
         #
         self.mode = mode
         self.extract_features = extract_features
@@ -28,16 +28,20 @@ class ImageEmbedding(nn.Module):
 
     def forward(self, image, image_ids):
         # Pdb().set_trace()
-        if self.extract_features:
+        # if self.extract_features:
             # N * 224 * 224 -> N * 512 * 14 * 14
-            image = self.cnn(image)
+            # image = self.cnn(image)
             # N * 512 * 14 * 14 -> N * 512 * 196 -> N * 196 * 512
-            image = image.view(-1, 512, 196).transpose(1, 2)
-            if self.features_dir is not None:
-                for i in range(len(image_ids)):
-                    path = '{}/{}.pth'.format(self.features_dir, image_ids[i])
-                    torch.save(image[i:i+1,:,:], path)
+            # image = image.view(-1, 512, 196).transpose(1, 2)
+            # if self.features_dir is not None:
+            #     for i in range(len(image_ids)):
+            #         path = '{}/{}.pth'.format(self.features_dir, image_ids[i])
+            #         torch.save(image[i:i+1,:,:], path)
         # N * 196 * 512 -> N * 196 * 1024
+
+        bn, c, H, W = image.shape
+        image = image.permute(0,2,3,1)
+        image = image.reshape(bn, H*W, c)
         image_embedding = self.fc(image)
         return image_embedding
 
@@ -63,7 +67,7 @@ class Attention(nn.Module):
         self.ff_image = nn.Linear(d, k)
         self.ff_ques = nn.Linear(d, k)
         if dropout:
-            self.dropout = nn.Dropout(p=0.5)
+            self.dropout = nn.Dropout(p=0.7)
         self.ff_attention = nn.Linear(k, 1)
 
     def forward(self, vi, vq):

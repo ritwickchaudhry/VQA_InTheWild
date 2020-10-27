@@ -17,9 +17,11 @@ from vqa import VQAModel
 from san import SANModel
 from scheduler import CustomReduceLROnPlateau
 
+# From VizWiz code
+from datasets import vqa_dataset
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', type=str, default='config.yml')
-
 
 def load_datasets(config, phases):
     config = config['data']
@@ -58,20 +60,21 @@ def main(config):
         phases = ['train', 'test']
     else:
         phases = ['train', 'val']
-    dataloaders, ques_vocab, ans_vocab = load_datasets(config, phases)
+
+    dataloaders = {x: vqa_dataset.get_loader(config, x) for x in phases}
 
     # add model parameters to config
-    config['model']['params']['vocab_size'] = len(ques_vocab)
-    config['model']['params']['output_size'] = len(ans_vocab) - 1   # -1 as don't want model to predict '<unk>'
-    config['model']['params']['extract_img_features'] = 'preprocess' in config['data']['images'] and config['data']['images']['preprocess']
+    config['model']['params']['vocab_size'] = dataloaders['train'].dataset.num_question_tokens
+    config['model']['params']['output_size'] = dataloaders['train'].dataset.num_answer_tokens
+    # config['model']['params']['extract_img_features'] = 'preprocess' in config['data']['images'] and config['data']['images']['preprocess']
     # which features dir? test, train or validate?
-    config['model']['params']['features_dir'] = os.path.join(
-       config['data']['dir'], config['data']['train']['emb_dir'])
+    # config['model']['params']['features_dir'] = os.path.join(
+    #    config['data']['dir'], config['data']['train']['emb_dir'])
     if config['model']['type'] == 'vqa':
         model = VQAModel(mode=config['mode'], **config['model']['params'])
     elif config['model']['type'] == 'san':
         model = SANModel(mode=config['mode'], **config['model']['params'])
-    print(model)
+    # print(model)
     criterion = nn.CrossEntropyLoss()
 
     if config['optim']['class'] == 'sgd':

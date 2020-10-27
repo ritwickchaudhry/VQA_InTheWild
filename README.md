@@ -1,22 +1,35 @@
-# Visual-Question-Answering
-This repository contains an AI system for the task of **[Visual Question Answering]**: given an image and a question related to the image in natural language, the systems answer the question in natural language from the image scene. The system can be configured to use one of 3 different underlying models:
+# VizWiz with SAN
+This repository contains a baseline attempt at using the SAN network used on VQA dataset and train it on the VizWiz dataset. The code based off aspects of the two following repositories:
 
-1. **VQA**: This is the *baseline model* given in the paper [VQA: Visual Question Answering]. It encodes the image by a CNN and the question by an LSTM and then combines these for VQA task. It uses *pretrained vgg16* to get the image embedding (may be further normalised), and a 1 or 2-layered LSTM for the question embedding.
-2. **SAN**: This is an *attention based model* described in the paper [Stacked Attention Networks for Image Question Answering]. It incorporates attention on the input image.
-3. **MUTAN**: This is a variant of the VQA model where instead of a simple of pointwise-product, the image and question embedding are combined using a a special *Multimodal Tucker fusion* technique described in the paper [MUTAN: Multimodal Tucker Fusion for Visual Question Answering].
+[Visual Question Answering]: https://github.com/Shivanshu-Gupta/Visual-Question-Answering (SAN model)
+[VizWiz]: https://github.com/DenisDsh/VizWiz-VQA-PyTorch (data processing)
 
-## Usage
-First download the datasets from [http://visualqa.org/download.html] - all items under *Balanced Real Images* except *Complementary Pairs List*. 
+The SAN model is mainly referenced from the first repository, and the data preprocessing is referenced from the VizWiz repository.
+
+The dataset of VizWiz can be found from: https://vizwiz.org/tasks-and-datasets/vqa/
+Please download training, validation, and annotation set.
+
+Preprocessing is done to extract image embeddings to speed up training. The words are only parsed into a vocabulary library, and is not preprocessed into word embeddings beforehand. To preprocess the refer to the code within 'preprocessing' folder (referenced from VizWiz repository). It will store the image embeddings into a .h5 file that is indexed by the image id.
+
+The processed image embedding will be size of (batch x 2048 x 14 x 14). In total with the original image set, it will take up at least 40 GB of space.
+
+To run:
+
 ```sh
-python main.py --config <config_file_path>
+python ./preprocessing/create_vocabs.py
+
+python ./preprocessing/image_features_extraction.py
 ```
-The system takes its arguments from the config file that it takes as input. Sample config files have been provided in [config/].
 
-In order to speed up the training, it's possible to preprocess the images in the dataset and store the image embeddings by setting the *emb_dir* and *preprocess* flag.
+Store all input data within a folder named prepro_data. It should contain: vocab.json, val.h5, train.h5, and a directory called Annotations (downloaded from VizWiz website).
 
-[Visual Question Answering]: https://vqa.cloudcv.org/
-[VQA: Visual Question Answering]: https://arxiv.org/abs/1505.00468
-[Stacked Attention Networks for Image Question Answering]: https://arxiv.org/pdf/1511.02274
-[MUTAN: Multimodal Tucker Fusion for Visual Question Answering]: https://arxiv.org/abs/1705.06676
-[http://visualqa.org/download.html]: http://visualqa.org/download.html
-[config/]: https://github.com/Shivanshu-Gupta/Visual-Question-Answering/config
+The running configurations are stored at ./config/config_san_sgd_vizwiz.yml, please edit the file directors to corresponding location of where data are stored. The configuration is adapted based on combination of the config file from the two repostiories. If embeddings are given, then the images within the data section will not be used.
+
+To run:
+```sh
+python main.py --config ./config/config_san_sgd_vizwiz.yml
+```
+
+The runtime per epoch is less than 1 minute per epoch, at batch size 32 on one GPU.
+
+The training loss and acc will be stored in ./vqa/san_sgd_vizwiz_0.01

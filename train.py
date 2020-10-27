@@ -8,18 +8,19 @@ from pdb import set_trace as bp
 from scheduler import CustomReduceLROnPlateau
 import json
 from tqdm import tqdm
-
+import csv
 
 def train(epoch, model, dataloader, criterion, optimizer, use_gpu=False):
     model.train()  # Set model to training mode
     running_loss = 0.0
-    running_corrects = 0
-    example_count = 0
+    running_corrects = 0.0
+    example_count = 0.0
     step = 0
     # Pdb().set_trace()
     # Iterate over data.
     with tqdm(total=len(dataloader),desc='Train Epoch#{}'.format(epoch + 1)) as t:
-        for questions, images, image_ids, answers, ques_ids in dataloader:
+        for item in dataloader:
+            questions, images, image_ids, answers = item['question'], item['visual'], item['sample_id'], item['answer']
             # print('questions size: ', questions.size())
             if use_gpu:
                 questions, images, image_ids, answers = questions.cuda(), images.cuda(), image_ids.cuda(), answers.cuda()
@@ -28,7 +29,10 @@ def train(epoch, model, dataloader, criterion, optimizer, use_gpu=False):
             # zero grad
             optimizer.zero_grad()
             ans_scores = model(images, questions, image_ids)
-            _, preds = torch.max(ans_scores, 1)
+
+            preds = torch.argmax(ans_scores, axis=1)
+            ans_scores = ans_scores.float()
+            answers = torch.tensor(answers, dtype=torch.int64).cuda().argmax(axis=1)
             loss = criterion(ans_scores, answers)
 
             # backward + optimize
@@ -45,8 +49,8 @@ def train(epoch, model, dataloader, criterion, optimizer, use_gpu=False):
             #         running_loss / example_count, running_corrects, example_count, (float(running_corrects) / example_count) * 100))
             # if step * batch_size == 40000:
             #     break
-            t.set_postfix({'running loss': running_loss / example_count, 
-                          'running_corrects': running_corrects, 
+            t.set_postfix({'running loss': (running_loss / example_count).cpu().data, 
+                          'running_corrects': (running_corrects).cpu().data, 
                           'example_count': example_count, 
                           'acc': (float(running_corrects) / example_count)})
             t.update(1) 
@@ -61,10 +65,11 @@ def train(epoch, model, dataloader, criterion, optimizer, use_gpu=False):
 def validate(model, dataloader, criterion, use_gpu=False):
     model.eval()  # Set model to evaluate mode
     running_loss = 0.0
-    running_corrects = 0
-    example_count = 0
+    running_corrects = 0.0
+    example_count = 0.0
     # Iterate over data.
-    for questions, images, image_ids, answers, ques_ids in dataloader:
+    for item in dataloader:
+        questions, images, image_ids, answers = item['question'], item['visual'], item['sample_id'], item['answer']
         if use_gpu:
             questions, images, image_ids, answers = questions.cuda(
             ), images.cuda(), image_ids.cuda(), answers.cuda()
@@ -73,11 +78,13 @@ def validate(model, dataloader, criterion, use_gpu=False):
 
         # zero grad
         ans_scores = model(images, questions, image_ids)
-        _, preds = torch.max(ans_scores, 1)
+        preds = torch.argmax(ans_scores, axis=1) 
+        ans_scores = ans_scores.float()
+        answers = torch.tensor(answers, dtype=torch.int64).cuda().argmax(axis=1)
         loss = criterion(ans_scores, answers)
 
         # statistics
-        running_loss += loss.data[0]
+        running_loss += loss.data
         running_corrects += torch.sum((preds == answers).data)
         example_count += answers.size(0)
     loss = running_loss / example_count
@@ -94,52 +101,52 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, save_dir, 
 
     best_model_wts = model.state_dict()
     best_acc = best_accuracy
-    writer = SummaryWriter(save_dir)
-    for epoch in range(start_epoch, num_epochs):
-        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
-        print('-' * 10)
-        train_begin = time.time()
-        train_loss, train_acc = train(epoch,
-            model, data_loaders['train'], criterion, optimizer, use_gpu)
-        train_time = time.time() - train_begin
-        print('Epoch Train Time: {:.0f}m {:.0f}s'.format(
-            train_time // 60, train_time % 60))
-        writer.add_scalar('Train Loss', train_loss, epoch)
-        writer.add_scalar('Train Accuracy', train_acc, epoch)
 
-        validation_begin = time.time()
-        val_loss, val_acc = validate(
-            model, data_loaders['val'], criterion, use_gpu)
-        validation_time = time.time() - validation_begin
-        print('Epoch Validation Time: {:.0f}m {:.0f}s'.format(
-            validation_time // 60, validation_time % 60))
-        writer.add_scalar('Validation Loss', val_loss, epoch)
-        writer.add_scalar('Validation Accuracy', val_acc, epoch)
+    with open(save_dir + '/train_data.csv', 'a+', newline='') as csvfile:
+        fieldnames = ['epoch', 'train_loss', 'train_acc', 'val_loss', 'val_acc']
+        writer = csv.writer(csvfile)
 
-        # deep copy the model
-        is_best = val_acc > best_acc
-        if is_best:
-            best_acc = val_acc
-            best_model_wts = model.state_dict()
+        for epoch in range(start_epoch, num_epochs):
+            print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+            print('-' * 10)
+            train_begin = time.time()
+            train_loss, train_acc = train(epoch,
+                model, data_loaders['train'], criterion, optimizer, use_gpu)
+            train_time = time.time() - train_begin
+            print('Epoch Train Time: {:.0f}m {:.0f}s'.format(
+                train_time // 60, train_time % 60))
 
-        save_checkpoint(save_dir, {
-            'epoch': epoch,
-            'best_acc': best_acc,
-            'state_dict': model.state_dict(),
-            # 'optimizer': optimizer.state_dict(),
-        }, is_best)
+            validation_begin = time.time()
+            val_loss, val_acc = validate(
+                model, data_loaders['val'], criterion, use_gpu)
+            validation_time = time.time() - validation_begin
+            print('Epoch Validation Time: {:.0f}m {:.0f}s'.format(
+                validation_time // 60, validation_time % 60))
+            writer.writerow([epoch, train_loss.data.cpu(), train_acc.data.cpu(), val_loss.data.cpu(), val_acc.data.cpu()])
 
-        writer.export_scalars_to_json(save_dir + "/all_scalars.json")
-        valid_error = 1.0 - val_acc / 100.0
-        if type(scheduler) == CustomReduceLROnPlateau:
-            scheduler.step(valid_error, epoch=epoch)
-            if scheduler.shouldStopTraining():
-                print("Stop training as no improvement in accuracy - no of unconstrainedBadEopchs: {0} > {1}".format(
-                    scheduler.unconstrainedBadEpochs, scheduler.maxPatienceToStopTraining))
-                # Pdb().set_trace()
-                break
-        else:
-            scheduler.step()
+            # deep copy the model
+            is_best = val_acc > best_acc
+            if is_best:
+                best_acc = val_acc
+                best_model_wts = model.state_dict()
+
+            save_checkpoint(save_dir, {
+                'epoch': epoch,
+                'best_acc': best_acc,
+                'state_dict': model.state_dict(),
+                # 'optimizer': optimizer.state_dict(),
+            }, is_best)
+
+            valid_error = 1.0 - val_acc / 100.0
+            if type(scheduler) == CustomReduceLROnPlateau:
+                scheduler.step(valid_error, epoch=epoch)
+                if scheduler.shouldStopTraining():
+                    print("Stop training as no improvement in accuracy - no of unconstrainedBadEopchs: {0} > {1}".format(
+                        scheduler.unconstrainedBadEpochs, scheduler.maxPatienceToStopTraining))
+                    # Pdb().set_trace()
+                    break
+            else:
+                scheduler.step()
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(

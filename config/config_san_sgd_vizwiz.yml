@@ -1,12 +1,30 @@
 prefix: san_sgd
 verbose: True
 mode: 'train'
-save_dir: './vqa/san_sgd_0.01'
+save_dir: './vqa/san_sgd_vizwiz_0.01'
 use_gpu: True
 debug: False
 seed: 123213
+annotations:
+    dir: /home/iis/Desktop/tiffany_417project/tar/Visual-Question-Answering/prepro_data/Annotations
+    top_ans: 3000
+    max_length: 26
+    min_count_word: 0
+    path_vocabs: /home/iis/Desktop/tiffany_417project/tar/Visual-Question-Answering/prepro_data/vocabs.json
+images:
+    dir: 
+        val: /home/iis/Desktop/tiffany_417project/tar/vizwiz/data_vizwiz/val
+        train: /home/iis/Desktop/tiffany_417project/tar/vizwiz/data_vizwiz/train
+    arch: ResNet152
+    mode: att
+    img_size: 448
+    preprocess_batch_size: 4
+    preprocess_data_workers: 4
+    path_features:
+        val: /home/iis/Desktop/tiffany_417project/tar/Visual-Question-Answering/prepro_data/val.h5
+        train: /home/iis/Desktop/tiffany_417project/tar/Visual-Question-Answering/prepro_data/train.h5
 data:
-    preprocess: False
+    preprocess: True
     dir: '/home/iis/Desktop/tiffany_417project/tar/'
     train:
         ques: 'Questions_Train_mscoco/MultipleChoice_mscoco_train2014_questions.json'
@@ -34,7 +52,7 @@ model:
         word_emb_size: 300
         emb_size: 1024
         # ques_channel_type: 'DEEPLSTM'
-        att_ff_size: 512
+        att_ff_size: 1024
         num_att_layers: 2
     reload: 'checkpoints.pth.tar'
 
@@ -42,7 +60,7 @@ optim:
     class: sgd      #sgd/rmsprop/adam
     scheduler: 'CustomReduceLROnPlateau'
     scheduler_params:
-        maxPatienceToStopTraining: 16
+        maxPatienceToStopTraining: 100
         base_class_params:
             mode: 'min'
             factor: 0.5
@@ -56,12 +74,13 @@ optim:
 
     params: 
         momentum: 0.9
-        lr: 0.01      # learning rate
+        lr: 0.0005     # learning rate
         # alpha: 0.99     # alpha for adagrad/rmsprop/momentum/adam
         # beta: 0.995     # beta used for adam
         # eps: 0.00001       # epsilon that goes into denominator in rmsprop
         weight_decay: 0.0005
 
 training:
-    no_of_epochs: 100
+    no_of_epochs: 200
     start_from_checkpoint: True
+    data_workers: 4

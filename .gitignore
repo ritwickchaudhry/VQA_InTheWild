@@ -112,3 +112,6 @@ scratch
 
 # old config files
 config/all
+
+# Model saved
+vqa/
