@@ -1,19 +1,19 @@
 logs:
     dir_logs: logs/vizwiz/
 annotations:
-    dir: /home/iis/Desktop/tiffany_417project/tar/vizwiz/data_vizwiz/Annotations
+    dir: /home/ubuntu/data_vizwiz/Annotations
     top_ans: 3000
-    max_length: 26
+    max_length: 40
     min_count_word: 0
-    path_vocabs: /home/iis/Desktop/tiffany_417project/tar/vizwiz/prepro_data/vocabs.json
+    path_vocabs: /home/ubuntu/prepro_data/vocabs.json
 images:
-    dir: /home/iis/Desktop/tiffany_417project/tar/vizwiz/data_vizwiz/train
+    dir: /home/ubuntu/data_vizwiz/test
     arch: ResNet152
     mode: att
     img_size: 448
     preprocess_batch_size: 4
     preprocess_data_workers: 4
-    path_features: /home/iis/Desktop/tiffany_417project/tar/vizwiz/prepro_data/
+    path_features: /home/ubuntu/prepro_data/image_features
 model:
 # Could be added new architectures and hyper-parameters like activations etc
     pretrained_model:  #./logs/... # leave empty if no pretrained model is available
@@ -22,8 +22,8 @@ model:
         emb_size: 300
     pooling:
         dim_v: 2048
-        dim_q: 1024
-        dim_h: 1024
+        dim_q: 512 # 1024
+        dim_h: 512 # 1024
         dropout_v: 0.5
         dropout_q: 0.5
     classifier:
@@ -37,10 +37,11 @@ training:
     lr: 0.001
     batch_size: 128
     epochs: 50
-    data_workers: 4
+    data_workers: 8
+    patience: 4
 
 prediction:
-    model_path: ./logs/vizwiz/2020-10-27/final_log.pth
+    model_path: ./logs/vizwiz/2020-10-28_18:54:09/best_accuracy_log.pth
     split: test
     submission_file: ./predictions/default_pred.json
 
