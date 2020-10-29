@@ -13,17 +13,20 @@ import models
 import utils
 from datasets import vqa_dataset
 
+from torch.utils.tensorboard import SummaryWriter
 
-def train(model, loader, optimizer, tracker, epoch, split):
+def train(model, loader, optimizer, tracker, tb_logger, epoch, split):
     model.train()
-
-    tracker_class, tracker_params = tracker.MovingMeanMonitor, {'momentum': 0.99}
+    # tracker_class, tracker_params = tracker.MovingMeanMonitor, {'momentum': 0.99}
+    tracker_class = utils.AvgMonitor
     tq = tqdm(loader, desc='{} E{:03d}'.format(split, epoch), ncols=0)
-    loss_tracker = tracker.track('{}_loss'.format(split), tracker_class(**tracker_params))
-    acc_tracker = tracker.track('{}_acc'.format(split), tracker_class(**tracker_params))
+    # loss_tracker = tracker.track('{}_loss'.format(split), tracker_class(**tracker_params))
+    # acc_tracker = tracker.track('{}_acc'.format(split), tracker_class(**tracker_params))
+    loss_tracker = tracker_class()
+    acc_tracker = tracker_class()
     log_softmax = nn.LogSoftmax(dim=1).cuda()
 
-    for item in tq:
+    for batch_idx, item in enumerate(tq):
         v = item['visual']
         q = item['question']
         a = item['answer']
@@ -47,27 +50,35 @@ def train(model, loader, optimizer, tracker, epoch, split):
         loss.backward()
         optimizer.step()
 
-        loss_tracker.append(loss.item())
-        acc_tracker.append(acc.mean())
+        # loss_tracker.append(loss.item())
+        # acc_tracker.append(acc.mean())
+        loss_tracker.update(loss.item(), v.shape[0])
+        acc_tracker.update(acc.mean(), v.shape[0])
+        tb_logger.add_scalar('train/loss', loss.item(), global_step = len(tq) * epoch + batch_idx)
+        tb_logger.add_scalar('train/accuracy', 100.0 * acc.mean(), global_step = len(tq) * epoch + batch_idx)
         fmt = '{:.4f}'.format
-        tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
+        # tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
+        tq.set_postfix(loss=fmt(loss_tracker.value), acc=fmt(acc_tracker.value))
 
 
-def evaluate(model, loader, tracker, epoch, split):
+def evaluate(model, loader, tracker, tb_logger, epoch, split):
     model.eval()
-    tracker_class, tracker_params = tracker.MeanMonitor, {}
+    # tracker_class, tracker_params = tracker.MeanMonitor, {}
+    tracker_class = utils.AvgMonitor
 
     predictions = []
     samples_ids = []
     accuracies = []
 
     tq = tqdm(loader, desc='{} E{:03d}'.format(split, epoch), ncols=0)
-    loss_tracker = tracker.track('{}_loss'.format(split), tracker_class(**tracker_params))
-    acc_tracker = tracker.track('{}_acc'.format(split), tracker_class(**tracker_params))
+    # loss_tracker = tracker.track('{}_loss'.format(split), tracker_class(**tracker_params))
+    # acc_tracker = tracker.track('{}_acc'.format(split), tracker_class(**tracker_params))
+    loss_tracker = tracker_class()
+    acc_tracker = tracker_class()
     log_softmax = nn.LogSoftmax(dim=1).cuda()
 
     with torch.no_grad():
-        for item in tq:
+        for batch_idx, item in enumerate(tq):
             v = item['visual']
             q = item['question']
             a = item['answer']
@@ -96,11 +107,16 @@ def evaluate(model, loader, tracker, epoch, split):
             # Sample id is necessary to obtain the mapping sample-prediction
             samples_ids.append(sample_id.view(-1).clone())
 
-            loss_tracker.append(loss.item())
-            acc_tracker.append(acc.mean())
+            # loss_tracker.append(loss.item())
+            # acc_tracker.append(acc.mean())
+            loss_tracker.update(loss.item(), v.shape[0])
+            acc_tracker.update(acc.mean(), v.shape[0])
             fmt = '{:.4f}'.format
-            tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
+            # tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
+            tq.set_postfix(loss=fmt(loss_tracker.value), acc=fmt(acc_tracker.value))
 
+        tb_logger.add_scalar('val/loss', loss_tracker.value, global_step = epoch)
+        tb_logger.add_scalar('val/accuracy', 100.0 * acc_tracker.value, global_step = epoch)
         predictions = list(torch.cat(predictions, dim=0))
         accuracies = list(torch.cat(accuracies, dim=0))
         samples_ids = list(torch.cat(samples_ids, dim=0))
@@ -109,8 +125,10 @@ def evaluate(model, loader, tracker, epoch, split):
         'answers': predictions,
         'accuracies': accuracies,
         'samples_ids': samples_ids,
-        'avg_accuracy': acc_tracker.mean.value,
-        'avg_loss': loss_tracker.mean.value
+        # 'avg_accuracy': acc_tracker.mean.value,
+        # 'avg_loss': loss_tracker.mean.value
+        'avg_accuracy': acc_tracker.value,
+        'avg_loss': loss_tracker.value
     }
 
     return eval_results
@@ -134,7 +152,14 @@ def main():
     if not os.path.exists(path_log_dir):
         os.makedirs(path_log_dir)
 
+    if args.path_config is not None:
+        # Dump the config file
+        with open(os.path.join(path_log_dir, "config.yaml"), "w") as f:
+            yaml.dump(config, f)
+
     print('Model logs will be saved in {}'.format(path_log_dir))
+
+    tb_logger = SummaryWriter(log_dir=path_log_dir)
 
     cudnn.benchmark = True
 
@@ -159,20 +184,24 @@ def main():
     min_loss = 10
     max_accuracy = 0
 
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=config['training']['patience'])
+
     path_best_accuracy = os.path.join(path_log_dir, 'best_accuracy_log.pth')
     path_best_loss = os.path.join(path_log_dir, 'best_loss_log.pth')
 
     for i in range(config['training']['epochs']):
 
-        train(model, train_loader, optimizer, tracker, epoch=i, split=config['training']['train_split'])
+        train(model, train_loader, optimizer, tracker, tb_logger, epoch=i, split=config['training']['train_split'])
         # If we are training on the train split (and not on train+val) we can evaluate on val
         if config['training']['train_split'] == 'train':
-            eval_results = evaluate(model, val_loader, tracker, epoch=i, split='val')
-
+            eval_results = evaluate(model, val_loader, tracker, tb_logger, epoch=i, split='val')
+            # Anneal LR and log it
+            scheduler.step(eval_results['avg_accuracy'])
+            tb_logger.add_scalar('LR', optimizer.param_groups[0]['lr'], global_step = i)
             # save all the information in the log file
             log_data = {
                 'epoch': i,
-                'tracker': tracker.to_dict(),
+                # 'tracker': tracker.to_dict(),
                 'config': config,
                 'weights': model.state_dict(),
                 'eval_results': eval_results,
@@ -190,7 +219,7 @@ def main():
 
     # Save final model
     log_data = {
-        'tracker': tracker.to_dict(),
+        # 'tracker': tracker.to_dict(),
         'config': config,
         'weights': model.state_dict(),
         'vocabs': train_loader.dataset.vocabs,
