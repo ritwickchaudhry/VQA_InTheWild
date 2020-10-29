@@ -64,6 +64,23 @@ class Tracker:
                 m = self.momentum
                 self.value = m * self.value + (1 - m) * value
 
+class AvgMonitor:
+    name = 'Average'
+
+    def __init__(self):
+        self.n = 0
+        self.total = 0
+
+    def update(self, value, number):
+        self.total += value * number
+        self.n += number
+
+    @property
+    def value(self):
+        if self.n != 0:
+            return self.total / self.n
+        else:
+            return 0.0
 
 def get_id_from_name(name):
     import re
