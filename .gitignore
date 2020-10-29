@@ -115,3 +115,7 @@ config/all
 
 # Model saved
 vqa/
+
+# result files
+**.pth
+**/logs/
