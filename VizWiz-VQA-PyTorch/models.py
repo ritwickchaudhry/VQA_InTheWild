@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 from torch.nn.utils.rnn import pack_padded_sequence
-
+import torchvision.models as models
 
 class Model(nn.Module):
     """
@@ -28,6 +28,10 @@ class Model(nn.Module):
             dim_q=dim_q,
             drop=config['model']['seq2vec']['dropout'],
         )
+        
+        # self.text = self.text.cuda()
+        # import pdb; pdb.set_trace()
+        
         self.attention = Attention(
             dim_v=dim_v,
             dim_q=dim_q,
@@ -35,6 +39,10 @@ class Model(nn.Module):
             n_glimpses=n_glimpses,
             drop=config['model']['attention']['dropout'],
         )
+        
+        # self.attention = self.attention.cuda()
+        # import pdb; pdb.set_trace()
+        
         self.classifier = Classifier(
             dim_input=n_glimpses * dim_v + dim_q,
             dim_h=dim_h,
@@ -42,16 +50,30 @@ class Model(nn.Module):
             drop=config['model']['classifier']['dropout'],
         )
 
+        # self.classifier = self.classifier.cuda()
+        # import pdb; pdb.set_trace()
+        
         for m in self.modules():
             if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
                 init.xavier_uniform_(m.weight)
                 if m.bias is not None:
                     m.bias.data.zero_()
 
-    def forward(self, v, q, q_len):
+        if not config['images']['preprocessed']:
+            self.extract_image_features = True
+            self.image_feature_extractor = ImageEncoder()
+        else:
+            self.extract_image_features = False
 
+        # self.image_feature_extractor = self.image_feature_extractor.cuda()
+        # import pdb; pdb.set_trace()
+
+
+    def forward(self, v, q, q_len):
         q = self.text(q, list(q_len.data))
         # L2 normalization on the depth dimension
+        if self.extract_image_features:
+            v = self.image_feature_extractor(v)
         v = F.normalize(v, p=2, dim=1)
         attention_maps = self.attention(v, q)
         v = apply_attention(v, attention_maps)
@@ -60,6 +82,22 @@ class Model(nn.Module):
         answer = self.classifier(combined)
         return answer
 
+class ImageEncoder(nn.Module):
+    def __init__(self):
+        super(ImageEncoder, self).__init__()
+        self.resnet = models.resnet50(pretrained=True)
+        modules = list(self.resnet.children())[:-2]
+        self.resnet = nn.Sequential(*modules)
+
+        # # Set a hook to get the adaptive avg pool features
+        # def extract_features(module, input, output):
+        #     self.feats = output
+        # self.resnet.layer4.register_forward_hook(extract_features)
+        # self.resnet.avgpool.register_forward_hook(extract_features)
+
+    def forward(self, x):
+        return self.resnet(x)
+        # return self.feats # [batch_size, 2048, 14, 14]
 
 class Classifier(nn.Sequential):
     def __init__(self, dim_input, dim_h, top_ans, drop=0.0):
