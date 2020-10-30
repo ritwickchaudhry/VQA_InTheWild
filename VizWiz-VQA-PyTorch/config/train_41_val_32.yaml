@@ -2,7 +2,6 @@ logs:
     dir_logs: logs/vizwiz/
 annotations:
     dir: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/data_vizwiz/Annotations
-    # /home/ubuntu/data_vizwiz/Annotations
     top_ans: 3000
     max_length: 40
     min_count_word: 0
@@ -10,12 +9,11 @@ annotations:
 images:
     dir: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/data_vizwiz/Images
     arch: ResNet152
-    mode: attention
+    mode: att
     img_size: 448
     preprocess_batch_size: 4
     preprocess_data_workers: 4
-    path_features: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/image_features
-    preprocessed: False
+    path_features: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/img_feat.h5
 model:
 # Could be added new architectures and hyper-parameters like activations etc
     pretrained_model:  #./logs/... # leave empty if no pretrained model is available
@@ -36,10 +34,10 @@ model:
         dropout: 0.5
 training:
     train_split: train
-    lr: 0.001
-    batch_size: 128
-    epochs: 50
-    data_workers: 8
+    lr: 0.0004
+    batch_size: 32
+    epochs: 200
+    data_workers: 4
     patience: 4
 
 prediction:
