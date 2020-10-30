@@ -119,7 +119,7 @@ class VQADataset(data.Dataset):
         img_name = self.img_names[i]
         item['img_name'] = img_name
         feature_id = self.name_to_id[img_name]
-        item['visual'] = selfself.features[feature_id] if self.preprocessed else self.features[feature_id]['visual'] 
+        item['visual'] = self.features[feature_id] if self.preprocessed else self.features[feature_id]['visual'] 
         # collate_fn sorts the samples in order to be possible to pack them later in the model.
         # the sample_id is returned so that the original order can be restored during when evaluating the predictions
         item['sample_id'] = i
