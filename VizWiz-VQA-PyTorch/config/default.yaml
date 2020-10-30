@@ -1,20 +1,23 @@
 logs:
     dir_logs: logs/vizwiz/
 annotations:
-    dir: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/data_vizwiz/Annotations
-    # /home/ubuntu/data_vizwiz/Annotations
+    # dir: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/data_vizwiz/Annotations
+    dir: /home/ubuntu/data_vizwiz/Annotations
     top_ans: 3000
     max_length: 40
     min_count_word: 0
-    path_vocabs: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/vocabs.json
+    # path_vocabs: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/vocabs.json
+    path_vocabs: /home/ubuntu/prepro_data/vocabs.json
 images:
-    dir: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/data_vizwiz/Images
+    # dir: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/data_vizwiz/Images
+    dir: /home/ubuntu/data_vizwiz/Images
     arch: ResNet152
     mode: attention
     img_size: 448
     preprocess_batch_size: 4
     preprocess_data_workers: 4
-    path_features: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/image_features
+    # path_features: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/image_features
+    path_features: /home/ubuntu/prepro_data/image_features
     preprocessed: False
 model:
 # Could be added new architectures and hyper-parameters like activations etc
@@ -37,10 +40,10 @@ model:
 training:
     train_split: train
     lr: 0.001
-    batch_size: 128
+    batch_size: 32
     epochs: 50
     data_workers: 8
-    patience: 4
+    patience: 10
 
 prediction:
     model_path: ./logs/vizwiz/2020-10-28_18:54:09/best_accuracy_log.pth
