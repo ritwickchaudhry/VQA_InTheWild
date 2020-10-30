@@ -44,7 +44,7 @@ class NetFeatureExtractor(nn.Module):
 def main():
     # Load config yaml file
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_config', default='/home/ubuntu/VQA_InTheWild/config/default.yaml', type=str,
+    parser.add_argument('--path_config', default='/home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/VizWiz-VQA-PyTorch/config/default.yaml', type=str,
                         help='path to a yaml config file')
     args = parser.parse_args()
 

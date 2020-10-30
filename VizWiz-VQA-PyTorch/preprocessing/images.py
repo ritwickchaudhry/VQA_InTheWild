@@ -42,6 +42,10 @@ class ImageDataset(data.Dataset):
 
         return item
 
+    @property
+    def get_image_names(self):
+        return self.image_names
+
     def __len__(self):
         return len(self.image_names)
 
