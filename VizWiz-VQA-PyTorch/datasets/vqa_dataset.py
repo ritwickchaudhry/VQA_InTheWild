@@ -8,7 +8,7 @@ import torch.utils.data as data
 
 from datasets.features import FeaturesDataset
 from preprocessing.preprocessing_utils import prepare_questions, prepare_answers, encode_question, encode_answers
-
+from preprocessing.images import ImageDataset, get_transform
 
 def get_loader(config, split):
     """ Returns the data loader of the specified dataset split """
@@ -71,16 +71,22 @@ class VQADataset(data.Dataset):
         if self.split == "train" or self.split == "trainval":
             self._filter_unanswerable_samples()
 
-        # load image names in feature extraction order
-        feat_path = config['images']['path_features'] + split + '.h5'
-        with h5py.File(feat_path, 'r') as f:
-            img_names = f['img_name'][()]
-        # self.name_to_id = {name: i for i, name in enumerate(img_names)}
+        self.preprocessed = config['images']['preprocessed']
+        if not self.preprocessed:
+            transform = get_transform(config['images']['img_size']) 
+            img_names = ImageDataset(os.path.join(config['images']['dir'], split), transform=transform) # os.path.join(config['images']['dir'], split)
+            self.name_to_id = {name: i for i, name in enumerate(img_names.get_image_names)}
+            self.features = img_names
+        else:
+            # load image names in feature extraction order
+            feat_path = config['images']['path_features'] + split + '.h5'
+            self.features = FeaturesDataset(feat_path, config['images']['mode'])
+            with h5py.File(feat_path, 'r') as f:
+                img_names = f['img_name'][()]
+            self.name_to_id = {name: i for i, name in enumerate()}
 
         # names in the annotations, will be used to get items from the dataset
-        self.img_names = img_names # [s['image'] for s in self.annotations]
-        # load features
-        self.features = FeaturesDataset(feat_path, config['images']['mode'])
+        self.img_names = [s['image'] for s in self.annotations]
 
     def _filter_unanswerable_samples(self):
         """
@@ -109,10 +115,11 @@ class VQADataset(data.Dataset):
         item['question'], item['q_length'] = self.questions[i]
         if self.split != 'test':
             item['answer'] = self.answers[i]
-        # img_name = self.img_names[i]
-        # feature_id = self.name_to_id[img_name]
-        item['img_name'] = self.img_names[i]
-        item['visual'] = self.features[i]
+
+        img_name = self.img_names[i]
+        item['img_name'] = img_name
+        feature_id = self.name_to_id[img_name]
+        item['visual'] = selfself.features[feature_id] if self.preprocessed else self.features[feature_id]['visual'] 
         # collate_fn sorts the samples in order to be possible to pack them later in the model.
         # the sample_id is returned so that the original order can be restored during when evaluating the predictions
         item['sample_id'] = i
