@@ -19,6 +19,7 @@ images:
     # path_features: /home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/prepro_data/image_features
     path_features: /home/ubuntu/prepro_data/image_features
     preprocessed: False
+    trainable: False
 model:
 # Could be added new architectures and hyper-parameters like activations etc
     pretrained_model:  #./logs/... # leave empty if no pretrained model is available
