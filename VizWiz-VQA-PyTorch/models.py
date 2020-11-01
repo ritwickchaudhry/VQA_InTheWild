@@ -15,7 +15,7 @@ class Model(nn.Module):
 
     def __init__(self, config, num_tokens):
         super(Model, self).__init__()
-
+        self.config = config
         dim_v = config['model']['pooling']['dim_v']
         dim_q = config['model']['pooling']['dim_q']
         dim_h = config['model']['pooling']['dim_h']
@@ -65,6 +65,9 @@ class Model(nn.Module):
         else:
             self.extract_image_features = False
 
+        if not config['images']['trainable']:
+            for param in self.image_feature_extractor.parameters():
+                param.requires_grad = False
         # self.image_feature_extractor = self.image_feature_extractor.cuda()
         # import pdb; pdb.set_trace()
 
@@ -73,7 +76,11 @@ class Model(nn.Module):
         q = self.text(q, list(q_len.data))
         # L2 normalization on the depth dimension
         if self.extract_image_features:
-            v = self.image_feature_extractor(v)
+            if self.config['images']['trainable']:
+                v = self.image_feature_extractor(v)
+            else:
+                with torch.no_grad():
+                    v = self.image_feature_extractor(v)
         v = F.normalize(v, p=2, dim=1)
         attention_maps = self.attention(v, q)
         v = apply_attention(v, attention_maps)
