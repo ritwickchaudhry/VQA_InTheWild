@@ -73,7 +73,7 @@ class VQADataset(data.Dataset):
 
         self.preprocessed = config['images']['preprocessed']
         if not self.preprocessed:
-            transform = get_transform(config['images']['img_size']) 
+            transform = get_transform(config)
             img_names = ImageDataset(os.path.join(config['images']['dir'], split), transform=transform) # os.path.join(config['images']['dir'], split)
             self.name_to_id = {name: i for i, name in enumerate(img_names.get_image_names)}
             self.features = img_names
@@ -119,7 +119,7 @@ class VQADataset(data.Dataset):
         img_name = self.img_names[i]
         item['img_name'] = img_name
         feature_id = self.name_to_id[img_name]
-        item['visual'] = self.features[feature_id] if self.preprocessed else self.features[feature_id]['visual'] 
+        item['visual'] = self.features[feature_id] if self.preprocessed else self.features[feature_id]['visual']
         # collate_fn sorts the samples in order to be possible to pack them later in the model.
         # the sample_id is returned so that the original order can be restored during when evaluating the predictions
         item['sample_id'] = i

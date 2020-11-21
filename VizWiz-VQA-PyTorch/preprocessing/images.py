@@ -65,19 +65,19 @@ class ImageDataset(data.Dataset):
 def get_transform(config):
 	img_config = config['images']
 	img_size = img_config['img_size']
-	all_transforms = [
-		transforms.Resize(img_size),
-		transforms.CenterCrop(img_size)
-	]
+	all_transforms = []
 	if img_config['augmentation']['do_crop']:
 		all_transforms.append(
 			# transforms.RandomResizedCrop( 
 			RandomResizedCrop(
 				img_size,
 				scale = img_config['augmentation']['crop_scale'],
-				aspect_ratio = img_config['augmentation']['crop_ratio']
+				ratio = img_config['augmentation']['crop_ratio']
 			))
+	else:
+		all_transforms.append(transforms.Resize(img_size))
 	all_transforms += [
+		transforms.CenterCrop(img_size),
 		transforms.ToTensor(),
 		transforms.Normalize(mean=[0.4774, 0.4510, 0.4103],
 							std=[0.2741, 0.2692, 0.2841]),

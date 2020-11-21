@@ -1,7 +1,10 @@
 import math
 import torch
 import torchvision
-import torch.functional as F
+import torchvision.transforms.functional as F
+from typing import Tuple, List, Optional
+from PIL import Image
+from torch import Tensor
 
 class RandomResizedCrop(torch.nn.Module):
     """Crop the given image to random size and aspect ratio.
@@ -50,7 +53,7 @@ class RandomResizedCrop(torch.nn.Module):
             tuple: params (i, j, h, w) to be passed to ``crop`` for a random
                 sized crop.
         """
-        width, height = F._get_image_size(img)
+        width, height = img.size
         area = height * width
 
         for _ in range(10):
