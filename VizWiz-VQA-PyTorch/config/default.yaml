@@ -20,6 +20,11 @@ images:
     path_features: /home/ubuntu/prepro_data/image_features
     preprocessed: False
     trainable: False
+    augmentation:
+        do_crop: true
+        crop_scale: [0.6, 1.0]
+        crop_ratio: [0.75, 1.33]
+
 model:
 # Could be added new architectures and hyper-parameters like activations etc
     pretrained_model:  #./logs/... # leave empty if no pretrained model is available
