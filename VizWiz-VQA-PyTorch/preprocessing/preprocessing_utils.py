@@ -1,7 +1,45 @@
 import re
 
 import torch
+from pdb import set_trace as bp
 
+def prepare_single_question(question):
+    question = question.lower()
+
+    # define desired replacements here
+    punctuation_dict = {'.': ' ', "'": '', '?': ' ', '_': ' ', '-': ' ', '/': ' ', ',': ' '}
+    conversational_dict = {"thank you": '', "thanks": '', "thank": '', "please": '', "hello": '',
+                           "hi ": ' ', "hey ": ' ', "good morning": '', "good afternoon": '', "have a nice day": '',
+                           "okay": '', "goodbye": ''}
+
+    rep = punctuation_dict
+    rep.update(conversational_dict)
+
+    # use these three lines to do the replacement
+    rep = dict((re.escape(k), v) for k, v in rep.items())
+    pattern = re.compile("|".join(rep.keys()))
+    question = pattern.sub(lambda m: rep[re.escape(m.group(0))], question)
+
+    # sentence to list
+    question = question.split(' ')
+
+    # remove empty strings
+    question = list(filter(None, question))
+
+    return question
+
+def prepare_questions_pretrain(annotations, questions_bank):
+    questions_bank = questions_bank['questions']
+    questions_dict = dict()
+    for question in questions_bank:
+        questions_dict[question['question_id']] = question['question']
+
+    prepared = []
+    for annotation in annotations:
+        question = questions_dict[annotation['question_id']]
+        prepared.append(prepare_single_question(question))
+
+    return prepared
 
 def prepare_questions(annotations):
     """ Filter, Normalize and Tokenize question. """
@@ -10,30 +48,7 @@ def prepare_questions(annotations):
     questions = [q['question'] for q in annotations]
 
     for question in questions:
-        # lower case
-        question = question.lower()
-
-        # define desired replacements here
-        punctuation_dict = {'.': ' ', "'": '', '?': ' ', '_': ' ', '-': ' ', '/': ' ', ',': ' '}
-        conversational_dict = {"thank you": '', "thanks": '', "thank": '', "please": '', "hello": '',
-                               "hi ": ' ', "hey ": ' ', "good morning": '', "good afternoon": '', "have a nice day": '',
-                               "okay": '', "goodbye": ''}
-
-        rep = punctuation_dict
-        rep.update(conversational_dict)
-
-        # use these three lines to do the replacement
-        rep = dict((re.escape(k), v) for k, v in rep.items())
-        pattern = re.compile("|".join(rep.keys()))
-        question = pattern.sub(lambda m: rep[re.escape(m.group(0))], question)
-
-        # sentence to list
-        question = question.split(' ')
-
-        # remove empty strings
-        question = list(filter(None, question))
-
-        prepared.append(question)
+        prepared.append(prepare_single_question(question))
 
     return prepared
 

@@ -1,10 +1,11 @@
 import os
 
+import sys 
+sys.path.append('./datasets')
+
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
-
-from datasets.custom_transforms import RandomResizedCrop
 
 IMG_EXTENSIONS = [
 	'.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -14,10 +15,6 @@ IMG_EXTENSIONS = [
 
 def is_image_file(filename):
 	return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
-
-
-
-
 
 class ImageDataset(data.Dataset):
 
@@ -56,9 +53,10 @@ class ImageDataset(data.Dataset):
 
 	def _load_img_paths(self):
 		images = []
-		for name in os.listdir(self.path):
+		for name in os.listdir(self.path): # TODO: Add train / val split
 			if is_image_file(name):
 				images.append(name)
+		print(len(images))
 		return images
 
 

@@ -8,8 +8,8 @@ from pprint import pprint
 
 import yaml
 
-from preprocessing_utils import prepare_questions, prepare_answers
-
+from preprocessing_utils import prepare_questions, prepare_answers, prepare_questions_pretrain
+from pdb import set_trace as bp
 
 def create_question_vocab(questions, min_count=0):
     """
@@ -62,7 +62,15 @@ def main():
     with open(train_path, 'r') as fd:
         train_ann = json.load(fd)
 
-    questions = prepare_questions(train_ann)
+    if config['annotations']['type'] == 'vqa':
+        train_ann = train_ann['annotations']
+        question_dir = config['annotations']['questions_dir']
+        path_ques = os.path.join(question_dir, config['training']['train_split'] + "_questions.json")
+        with open(path_ques, 'r') as fd:
+            questions_bank = json.load(fd)
+        questions = prepare_questions_pretrain(train_ann, questions_bank)
+    else:
+        questions = prepare_questions(train_ann)
 
     question_vocab = create_question_vocab(questions, config['annotations']['min_count_word'])
     answer_vocab = create_answer_vocab(train_ann, config['annotations']['top_ans'])

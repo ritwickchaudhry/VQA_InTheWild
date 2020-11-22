@@ -44,14 +44,14 @@ class NetFeatureExtractor(nn.Module):
 def main():
     # Load config yaml file
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_config', default='/home/iis/Desktop/tiffany_417project/tar/VQA_InTheWild/VizWiz-VQA-PyTorch/config/default.yaml', type=str,
+    parser.add_argument('--path_config', default='/home/ubuntu/VQA_InTheWild/VizWiz-VQA-PyTorch/config/default.yaml', type=str,
                         help='path to a yaml config file')
     args = parser.parse_args()
 
     if args.path_config is not None:
         with open(args.path_config, 'r') as handle:
             config = yaml.load(handle)
-            config = config['images']
+            # config = config['images']
 
     # Benchmark mode is good whenever your input sizes for your network do not vary
     cudnn.benchmark = True
@@ -59,20 +59,20 @@ def main():
     net = NetFeatureExtractor().cuda()
     net.eval()
     # Resize, Crop, Normalize
-    transform = get_transform(config['img_size'])
-    dataset = ImageDataset(config['dir'], transform=transform)
+    transform = get_transform(config)
+    dataset = ImageDataset(config['images']['dir'], transform=transform)
 
     data_loader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=config['preprocess_batch_size'],
-        num_workers=config['preprocess_data_workers'],
+        batch_size=config['images']['preprocess_batch_size'],
+        num_workers=config['images']['preprocess_data_workers'],
         shuffle=False,
         pin_memory=True,
     )
 
-    h5_file = h5py.File(config['path_features'], 'w')
+    h5_file = h5py.File(config['images']['path_features'], 'w')
 
-    dummy_input = Variable(torch.ones(1, 3, config['img_size'], config['img_size']), volatile=True).cuda()
+    dummy_input = Variable(torch.ones(1, 3, config['images']['img_size'], config['images']['img_size']), volatile=True).cuda()
     _, dummy_output = net(dummy_input)
 
     att_features_shape = (
