@@ -28,10 +28,7 @@ class Model(nn.Module):
             dim_q=dim_q,
             drop=config['model']['seq2vec']['dropout'],
         )
-        
-        # self.text = self.text.cuda()
-        # import pdb; pdb.set_trace()
-        
+                
         self.attention = Attention(
             dim_v=dim_v,
             dim_q=dim_q,
@@ -40,8 +37,6 @@ class Model(nn.Module):
             drop=config['model']['attention']['dropout'],
         )
         
-        # self.attention = self.attention.cuda()
-        # import pdb; pdb.set_trace()
         
         self.classifier = Classifier(
             dim_input=n_glimpses * dim_v + dim_q,
@@ -50,8 +45,6 @@ class Model(nn.Module):
             drop=config['model']['classifier']['dropout'],
         )
 
-        # self.classifier = self.classifier.cuda()
-        # import pdb; pdb.set_trace()
         
         for m in self.modules():
             if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
@@ -68,8 +61,6 @@ class Model(nn.Module):
         if not config['images']['trainable']:
             for param in self.image_feature_extractor.parameters():
                 param.requires_grad = False
-        # self.image_feature_extractor = self.image_feature_extractor.cuda()
-        # import pdb; pdb.set_trace()
 
 
     def forward(self, v, q, q_len):

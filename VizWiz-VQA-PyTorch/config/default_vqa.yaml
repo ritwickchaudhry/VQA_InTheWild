@@ -10,12 +10,12 @@ annotations:
     path_vocabs: /home/ubuntu/prepro_data/vqa/vocabs.json
 images:
     dir: /home/ubuntu/data_vqa/Images
-    dir_prefix: COCO_train2014_000000
+    dir_prefix: COCO_split2014_000000
     arch: ResNet152
     mode: attention
     img_size: 448
     preprocess_batch_size: 32
-    preprocess_data_workers: 4
+    preprocess_data_workers: 8
     path_features: /home/ubuntu/prepro_data/vqa/image_features
     preprocessed: False
     trainable: True
@@ -26,7 +26,14 @@ images:
 
 model:
 # Could be added new architectures and hyper-parameters like activations etc
-    pretrained_model:  #./logs/... # leave empty if no pretrained model is available
+    pretrained:
+        use_pretrained: false
+        use_full_weights: false
+        pretrained_model_path: ""
+        transfer_image_feature_extractor: false
+        freeze_image_feature_extractor: false
+        transfer_attention_network: false
+        freeze_attention_network: false
     seq2vec:
         dropout: 0.25
         emb_size: 300
@@ -46,8 +53,8 @@ training:
     train_split: train
     lr: 0.001
     batch_size: 32
-    epochs: 50
-    data_workers: 8
+    epochs: 2
+    data_workers: 0
     patience: 5
 
 prediction:

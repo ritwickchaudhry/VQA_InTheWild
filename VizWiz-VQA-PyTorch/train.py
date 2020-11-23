@@ -15,6 +15,47 @@ from datasets import vqa_dataset
 
 from torch.utils.tensorboard import SummaryWriter
 
+def load_weights(model, config):
+	if config['use_pretrained'] is False:
+		return
+	else:
+		print("--*--" * 8)
+		print("Starting Model Initialization")
+		print("--*--" * 8)
+		print("Loading Model from %s" % config['pretrained_model_path'])
+		log = torch.load(config['pretrained_model_path'])
+		dict_weights = log['weights']
+		if config['use_full_weights']:
+			print("Loading the full model weights")
+			model.load_state_dict(dict_weights)
+		else:
+			if config['transfer_image_feature_extractor']:
+				print("--*--" * 8)
+				print("Loading the Image Feature Extractor weights")
+				image_feature_extractor_weights = {'.'.join(k.split('.')[2:]) : v for k,v in dict_weights.items() \
+									 if 'image_feature_extractor' in k}
+				model.image_feature_extractor.load_state_dict(image_feature_extractor_weights)
+				if config['freeze_image_feature_extractor']:
+					print("Freezing the Image Feature Extractor weights")
+					for param in model.image_feature_extractor.parameters():
+						param.requires_grad = False
+				print("--*--" * 8)
+			if config['transfer_attention_network']:
+				print("--*--" * 8)
+				print("Loading the Attention Network weights")
+				attention_network_weights = {'.'.join(k.split('.')[2:]) : v for k,v in dict_weights.items() \
+									 if 'attention' in k}
+				model.attention.load_state_dict(attention_network_weights)
+				if config['freeze_attention_network']:
+					print("Freezing the Attention Network weights")
+					for param in model.attention.parameters():
+						param.requires_grad = False
+				print("--*--" * 8)
+			
+		print("--*--" * 8)
+		print("Model Initialization Complete")
+		print("--*--" * 8)
+
 def train(model, loader, optimizer, tracker, tb_logger, epoch, split):
 	model.train()
 	# tracker_class, tracker_params = tracker.MovingMeanMonitor, {'momentum': 0.99}
@@ -167,17 +208,14 @@ def main():
 	train_loader = vqa_dataset.get_loader(config, split='train')
 	val_loader = vqa_dataset.get_loader(config, split='val')
 	print('Got Loader')
-	model = nn.DataParallel(models.Model(config, train_loader.dataset.num_tokens)).cuda()
+	# model = nn.DataParallel(models.Model(config, train_loader.dataset.num_tokens)).cuda()
+	model = models.Model(config, train_loader.dataset.num_tokens).cuda()
 
 	optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
 								 config['training']['lr'])
 
 	# Load model weights if necessary
-	if config['model']['pretrained_model'] is not None:
-		print("Loading Model from %s" % config['model']['pretrained_model'])
-		log = torch.load(config['model']['pretrained_model'])
-		dict_weights = log['weights']
-		model.load_state_dict(dict_weights)
+	load_weights(model, config['model']['pretrained'])
 
 	tracker = utils.Tracker()
 
@@ -189,8 +227,17 @@ def main():
 	path_best_accuracy = os.path.join(path_log_dir, 'best_accuracy_log.pth')
 	path_best_loss = os.path.join(path_log_dir, 'best_loss_log.pth')
 
-	for i in range(config['training']['epochs']):
+	# Save the model before we train.
+	path_init = os.path.join(path_log_dir, 'init_log.pth')
+	log_data = {
+		'epoch': -1,
+		'config': config,
+		'weights': model.state_dict(),
+		'vocabs': train_loader.dataset.vocabs,
+	}
+	torch.save(log_data, path_init)  # save model
 
+	for i in range(config['training']['epochs']):
 		train(model, train_loader, optimizer, tracker, tb_logger, epoch=i, split=config['training']['train_split'])
 		# If we are training on the train split (and not on train+val) we can evaluate on val
 		if config['training']['train_split'] == 'train':
@@ -201,12 +248,15 @@ def main():
 			# save all the information in the log file
 			log_data = {
 				'epoch': i,
-				# 'tracker': tracker.to_dict(),
 				'config': config,
 				'weights': model.state_dict(),
 				'eval_results': eval_results,
 				'vocabs': train_loader.dataset.vocabs,
 			}
+
+			# Save logs after every epoch
+			epoch_log_path = os.path.join(path_log_dir, 'epoch_{}_log.pth'.format(i))
+			torch.save(log_data, epoch_log_path)
 
 			# save logs for min validation loss and max validation accuracy
 			if eval_results['avg_loss'] < min_loss:
@@ -217,16 +267,15 @@ def main():
 				torch.save(log_data, path_best_accuracy)  # save model
 				max_accuracy = eval_results['avg_accuracy']  # update max accuracy value
 
-	# Save final model
-	log_data = {
-		# 'tracker': tracker.to_dict(),
-		'config': config,
-		'weights': model.state_dict(),
-		'vocabs': train_loader.dataset.vocabs,
-	}
+	# # Save final model
+	# log_data = {
+	# 	'config': config,
+	# 	'weights': model.state_dict(),
+	# 	'vocabs': train_loader.dataset.vocabs,
+	# }
 
-	path_final_log = os.path.join(path_log_dir, 'final_log.pth')
-	torch.save(log_data, path_final_log)
+	# path_final_log = os.path.join(path_log_dir, 'final_log.pth')
+	# torch.save(log_data, path_final_log)
 
 
 if __name__ == '__main__':

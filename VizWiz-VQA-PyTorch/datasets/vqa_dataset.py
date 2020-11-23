@@ -43,6 +43,7 @@ def collate_fn(batch):
 class VQA_Pretrain_Dataset(data.Dataset):
     def __init__(self, config, split):
         super(VQA_Pretrain_Dataset, self).__init__()
+        img_dir_prefix = config['images']['dir_prefix'].replace('split', split)
 
         with open(config['annotations']['path_vocabs'], 'r') as fd:
             vocabs = json.load(fd)
@@ -98,7 +99,7 @@ class VQA_Pretrain_Dataset(data.Dataset):
             self.name_to_id = {name: i for i, name in enumerate()}
 
         # names in the annotations, will be used to get items from the dataset
-        self.img_names = [config['images']['dir_prefix']+'{:06d}'.format(s['image_id'])+'.jpg' for s in self.annotations]
+        self.img_names = [img_dir_prefix+'{:06d}'.format(s['image_id'])+'.jpg' for s in self.annotations]
 
     def _filter_unanswerable_samples(self):
         """

@@ -1,0 +1,65 @@
+logs:
+    dir_logs: logs/vizwiz/
+annotations:
+    type: "vizwiz"
+    dir: /home/ubuntu/data_vizwiz/Annotations
+    questions_dir: /home/ubuntu/data_vizwiz/Annotations/questions
+    top_ans: 3000
+    max_length: 40
+    min_count_word: 0
+    path_vocabs: /home/ubuntu/prepro_data/viz_wiz/vocabs.json
+images:
+    dir: /home/ubuntu/data_vizwiz/Images
+    dir_prefix: COCO_split2014_000000
+    arch: ResNet152
+    mode: attention
+    img_size: 448
+    preprocess_batch_size: 32
+    preprocess_data_workers: 8
+    path_features: /home/ubuntu/prepro_data/viz_wiz/image_features
+    preprocessed: False
+    trainable: True
+    augmentation:
+        do_crop: false
+        crop_scale: [0.6, 1.0]
+        crop_ratio: [0.75, 1.33]
+
+model:
+# Could be added new architectures and hyper-parameters like activations etc
+    pretrained:
+        use_pretrained: true
+        use_full_weights: false
+        pretrained_model_path: "/home/ubuntu/VQA_InTheWild/VizWiz-VQA-PyTorch/logs/vqa/2020-11-23_09:09:14/init_log.pth"
+        transfer_image_feature_extractor: true
+        freeze_image_feature_extractor: false
+        transfer_attention_network: true
+        freeze_attention_network: false
+    # pretrained_model:  #./logs/... # leave empty if no pretrained model is available
+    seq2vec:
+        dropout: 0.25
+        emb_size: 300
+    pooling:
+        dim_v: 2048
+        dim_q: 512 # 1024
+        dim_h: 512 # 1024
+        dropout_v: 0.5
+        dropout_q: 0.5
+    classifier:
+        dropout: 0.5
+    attention:
+        glimpses: 2
+        mid_features: 512
+        dropout: 0.5
+training:
+    train_split: train
+    lr: 0.001
+    batch_size: 32
+    epochs: 20
+    data_workers: 0
+    patience: 5
+
+prediction:
+    model_path: ./logs/vqa/2020-10-28_18:54:09/best_accuracy_log.pth
+    split: test
+    submission_file: ./predictions/default_pred.json
+
