@@ -10,7 +10,7 @@ annotations:
     path_vocabs: /home/ubuntu/prepro_data/viz_wiz/vocabs.json
 images:
     dir: /home/ubuntu/data_vizwiz/Images
-    dir_prefix: COCO_split2014_000000
+    dir_prefix: ""
     arch: ResNet152
     mode: attention
     img_size: 448
@@ -29,7 +29,7 @@ model:
     pretrained:
         use_pretrained: true
         use_full_weights: false
-        pretrained_model_path: "/home/ubuntu/VQA_InTheWild/VizWiz-VQA-PyTorch/logs/vqa/2020-11-23_09:09:14/init_log.pth"
+        pretrained_model_path: /home/ubuntu/VQA_InTheWild/VizWiz-VQA-PyTorch/logs/vqa/2020-11-23_09:59:52/best_accuracy_log.pth
         transfer_image_feature_extractor: true
         freeze_image_feature_extractor: false
         transfer_attention_network: true
@@ -56,7 +56,7 @@ training:
     batch_size: 32
     epochs: 20
     data_workers: 0
-    patience: 5
+    patience: 7
 
 prediction:
     model_path: ./logs/vqa/2020-10-28_18:54:09/best_accuracy_log.pth

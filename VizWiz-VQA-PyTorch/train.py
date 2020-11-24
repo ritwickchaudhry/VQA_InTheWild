@@ -32,7 +32,7 @@ def load_weights(model, config):
 			if config['transfer_image_feature_extractor']:
 				print("--*--" * 8)
 				print("Loading the Image Feature Extractor weights")
-				image_feature_extractor_weights = {'.'.join(k.split('.')[2:]) : v for k,v in dict_weights.items() \
+				image_feature_extractor_weights = {'.'.join(k.split('.')[1:]) : v for k,v in dict_weights.items() \
 									 if 'image_feature_extractor' in k}
 				model.image_feature_extractor.load_state_dict(image_feature_extractor_weights)
 				if config['freeze_image_feature_extractor']:
@@ -43,7 +43,7 @@ def load_weights(model, config):
 			if config['transfer_attention_network']:
 				print("--*--" * 8)
 				print("Loading the Attention Network weights")
-				attention_network_weights = {'.'.join(k.split('.')[2:]) : v for k,v in dict_weights.items() \
+				attention_network_weights = {'.'.join(k.split('.')[1:]) : v for k,v in dict_weights.items() \
 									 if 'attention' in k}
 				model.attention.load_state_dict(attention_network_weights)
 				if config['freeze_attention_network']:
