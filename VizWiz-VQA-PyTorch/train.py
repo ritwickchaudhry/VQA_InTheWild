@@ -72,7 +72,7 @@ def train(model, loader, optimizer, tracker, tb_logger, epoch, split):
 		q = item['question']
 		a = item['answer']
 		q_length = item['q_length']
-
+		
 		v = Variable(v.cuda(async=True))
 		q = Variable(q.cuda(async=True))
 		a = Variable(a.cuda(async=True))

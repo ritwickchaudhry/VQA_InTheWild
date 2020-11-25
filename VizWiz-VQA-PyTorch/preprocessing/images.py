@@ -7,6 +7,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
 
+
 IMG_EXTENSIONS = [
 	'.jpg', '.JPG', '.jpeg', '.JPEG',
 	'.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
@@ -41,7 +42,6 @@ class ImageDataset(data.Dataset):
 		item['visual'] = Image.open(item['path']).convert('RGB')
 		if self.transform is not None:
 			item['visual'] = self.transform(item['visual'])
-
 		return item
 
 	@property
@@ -64,6 +64,7 @@ def get_transform(config):
 	img_config = config['images']
 	img_size = img_config['img_size']
 	all_transforms = []
+
 	if img_config['augmentation']['do_crop']:
 		all_transforms.append(
 			# transforms.RandomResizedCrop( 
@@ -74,10 +75,17 @@ def get_transform(config):
 			))
 	else:
 		all_transforms.append(transforms.Resize(img_size))
+
+	if img_config['augmentation']['do_blur']:
+		all_transforms.append(
+			transforms.GaussianBlur(img_config['augmentation']['blur_size'])
+			)
+
 	all_transforms += [
 		transforms.CenterCrop(img_size),
 		transforms.ToTensor(),
-		transforms.Normalize(mean=[0.4774, 0.4510, 0.4103],
-							std=[0.2741, 0.2692, 0.2841]),
+		transforms.Normalize(mean=[0.4711275, 0.44754702, 0.40802705],
+							std=[0.24383631, 0.23895378, 0.24194406]),
 	]
+
 	return transforms.Compose(all_transforms)

@@ -9,6 +9,11 @@ from pdb import set_trace as bp
 from datasets.features import FeaturesDataset
 from preprocessing.preprocessing_utils import prepare_questions, prepare_answers, encode_question, encode_answers, prepare_questions_pretrain
 from preprocessing.images import ImageDataset, get_transform
+import cv2
+import numpy as np
+import torchvision.transforms as transforms
+from PIL import Image
+from torchvision.utils import save_image
 
 def get_loader(config, split):
     """ Returns the data loader of the specified dataset split """
@@ -70,17 +75,17 @@ class VQA_Pretrain_Dataset(data.Dataset):
         with open(path_ques, 'r') as fd:
             self.questions_bank = json.load(fd)
 
-        self.questions = prepare_questions_pretrain(self.annotations, self.questions_bank)
-        self.questions = [encode_question(q, self.token_to_index, self.max_question_length) for q in
-                          self.questions]  # encode questions and return question and question lenght
-        # answers
-        if self.split != 'test':
-            self.answers = prepare_answers(self.annotations)
-            self.answers = [encode_answers(a, self.answer_to_index) for a in
-                            self.answers]  # create a sparse vector of len(self.answer_to_index) for each question containing the occurances of each answer
+        # self.questions = prepare_questions_pretrain(self.annotations, self.questions_bank)
+        # self.questions = [encode_question(q, self.token_to_index, self.max_question_length) for q in
+        #                   self.questions]  # encode questions and return question and question lenght
+        # # answers
+        # if self.split != 'test':
+        #     self.answers = prepare_answers(self.annotations)
+        #     self.answers = [encode_answers(a, self.answer_to_index) for a in
+        #                     self.answers]  # create a sparse vector of len(self.answer_to_index) for each question containing the occurances of each answer
         
-        if self.split == "train" or self.split == "trainval":
-            self._filter_unanswerable_samples()
+        # if self.split == "train" or self.split == "trainval":
+        #     self._filter_unanswerable_samples()
 
         # images
         self.name_to_id = dict()
@@ -90,6 +95,20 @@ class VQA_Pretrain_Dataset(data.Dataset):
             img_names = ImageDataset(os.path.join(config['images']['dir'], split), transform=transform)
             self.name_to_id = {name: i for i, name in enumerate(img_names.get_image_names)}            
             self.features = img_names
+            if config['images']['save_transformed_sample'] > 0:
+                np.random.seed(10417)
+                idx = np.random.permutation(len(img_names.get_image_names))[:config['images']['save_transformed_sample']]
+                for i in idx:
+                    sample = img_names.get_image_names[i]
+                    img_name = os.path.join(config['images']['dir'] + '/' + split, sample)
+                    img = Image.open(img_name)
+                    transformed_img = transform(img)
+                    sample_dir = config['images']['dir'] + '/transform/' + split
+                    if not os.path.exists(sample_dir):
+                        os.makedirs(sample_dir)
+
+                    pil_img = transforms.ToPILImage()(transformed_img)
+                    pil_img.save(os.path.join(sample_dir, os.path.basename(img_name)))
         else:
             # load image names in feature extraction order
             feat_path = config['images']['path_features'] + split + '.h5'
@@ -147,7 +166,6 @@ class VQADataset(data.Dataset):
 
     def __init__(self, config, split):
         super(VQADataset, self).__init__()
-
 
         annotations_dir = config['annotations']['dir']
 

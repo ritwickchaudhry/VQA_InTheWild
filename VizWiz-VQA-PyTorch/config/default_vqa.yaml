@@ -19,8 +19,12 @@ images:
     path_features: /home/ubuntu/prepro_data/vqa/image_features
     preprocessed: False
     trainable: True
+    save_transformed_sample: 0
     augmentation:
-        do_crop: false
+        # save_transformed_path: 
+        do_crop: False
+        do_blur: False
+        blur_size: 105
         crop_scale: [0.6, 1.0]
         crop_ratio: [0.75, 1.33]
 
