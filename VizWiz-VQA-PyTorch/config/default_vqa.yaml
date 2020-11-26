@@ -1,5 +1,5 @@
 logs:
-    dir_logs: logs/vqa/
+    dir_logs: logs/vqa/low_perturbations # CHANGE BEFORE RUN
 annotations:
     type: "vqa"
     dir: /home/ubuntu/data_vqa/Annotations
@@ -19,13 +19,14 @@ images:
     path_features: /home/ubuntu/prepro_data/vqa/image_features
     preprocessed: False
     trainable: True
-    save_transformed_sample: 0
+    save_transformed_sample: 50
     augmentation:
         # save_transformed_path: 
         do_crop: true
         do_blur: true
         do_erasing: true
-        blur_size: 55
+        blur_size: 19
+        blur_sigma: 3
         crop_scale: [0.8, 1.0]
         crop_ratio: [0.75, 1.33]
         erasing_probability: 0.3
@@ -67,7 +68,7 @@ training:
     val_freq: 5000
 
 prediction:
-    model_path: ./logs/vqa/2020-10-28_18:54:09/best_accuracy_log.pth
+    model_path: ./logs/vqa/low_perturbations/best_accuracy_log.pth
     split: test
     submission_file: ./predictions/default_pred.json
 

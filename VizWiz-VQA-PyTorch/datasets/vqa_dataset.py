@@ -95,8 +95,12 @@ class VQA_Pretrain_Dataset(data.Dataset):
             img_names = ImageDataset(os.path.join(config['images']['dir'], split), transform=transform)
             self.name_to_id = {name: i for i, name in enumerate(img_names.get_image_names)}            
             self.features = img_names
+
+            inv_normalization = transforms.Normalize(
+                mean=[-0.4711275/0.24383631, -0.44754702/0.23895378, -0.40802705/0.24194406],
+                std=[1/0.24383631, 1/0.23895378, 1/0.24194406]
+            )
             if config['images']['save_transformed_sample'] > 0:
-                np.random.seed(10417)
                 idx = np.random.permutation(len(img_names.get_image_names))[:config['images']['save_transformed_sample']]
                 for i in idx:
                     sample = img_names.get_image_names[i]
@@ -107,7 +111,9 @@ class VQA_Pretrain_Dataset(data.Dataset):
                     if not os.path.exists(sample_dir):
                         os.makedirs(sample_dir)
 
-                    pil_img = transforms.ToPILImage()(transformed_img)
+                    # Revert normalization
+                    inv_transformed_img = inv_normalization(transformed_img)
+                    pil_img = transforms.ToPILImage()(inv_transformed_img)
                     pil_img.save(os.path.join(sample_dir, os.path.basename(img_name)))
         else:
             # load image names in feature extraction order

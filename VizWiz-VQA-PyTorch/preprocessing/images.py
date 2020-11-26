@@ -79,7 +79,7 @@ def get_transform(config):
 
 	if augmentation_config['do_blur']:
 		all_transforms.append(
-			transforms.GaussianBlur(augmentation_config['blur_size'])
+			transforms.GaussianBlur(augmentation_config['blur_size'], augmentation_config['blur_sigma'])
 			)
 
 	all_transforms += [
