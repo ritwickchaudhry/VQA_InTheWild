@@ -10,8 +10,8 @@ from torchvision import transforms
 
 def revert_transform(image_tensor):
 	inv_normalize = transforms.Normalize(
-    mean=[-0.4774/0.2741, -0.4510/0.2692, -0.4103/0.2841],
-    std=[1/0.2741, 1/0.2692, 1/0.2841]
+		mean=[-0.4711275/0.24383631, -0.44754702/0.23895378, -0.40802705/0.24194406],
+		std=[1/0.24383631, 1/0.23895378, 1/0.24194406]
 	)
 	inv_tensor = inv_normalize(image_tensor)
 	to_pil = transforms.ToPILImage()
@@ -20,14 +20,14 @@ def revert_transform(image_tensor):
 if __name__ == "__main__":
 	# Load config yaml file
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--path_config', default='config/default.yaml', type=str,
+	parser.add_argument('--path_config', default='config/default_vizwiz.yaml', type=str,
 						help='path to a yaml config file')
 	args = parser.parse_args()
 
 	with open(args.path_config, 'r') as handle:
 		config = yaml.load(handle)
 	
-	split='train'
+	split='val'
 	dataset = vqa_dataset.VQADataset(
         config,
         split
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 	if not os.path.exists(results_dir):
 		os.makedirs(results_dir)
 	plt.show()
-	plt.savefig(os.path.join(results_dir, 'crop_test.png'))
+	plt.savefig(os.path.join(results_dir, 'augmentation_test.png'))
 	# val_loader = vqa_dataset.get_loader(config, split='val')
 	# print(val_loader.__getitem__(0))
 

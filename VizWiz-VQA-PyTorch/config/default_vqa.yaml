@@ -24,9 +24,12 @@ images:
         # save_transformed_path: 
         do_crop: False
         do_blur: False
+        do_erasing: True
         blur_size: 105
         crop_scale: [0.6, 1.0]
         crop_ratio: [0.75, 1.33]
+        erasing_probability: 1
+        erasing_scale: [0.01, 0.1]
 
 model:
 # Could be added new architectures and hyper-parameters like activations etc

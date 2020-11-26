@@ -64,21 +64,22 @@ def get_transform(config):
 	img_config = config['images']
 	img_size = img_config['img_size']
 	all_transforms = []
+	augmentation_config = img_config['augmentation']
 
-	if img_config['augmentation']['do_crop']:
+	if augmentation_config['do_crop']:
 		all_transforms.append(
 			# transforms.RandomResizedCrop( 
 			RandomResizedCrop(
 				img_size,
-				scale = img_config['augmentation']['crop_scale'],
-				ratio = img_config['augmentation']['crop_ratio']
+				scale = augmentation_config['crop_scale'],
+				ratio = augmentation_config['crop_ratio']
 			))
 	else:
 		all_transforms.append(transforms.Resize(img_size))
 
-	if img_config['augmentation']['do_blur']:
+	if augmentation_config['do_blur']:
 		all_transforms.append(
-			transforms.GaussianBlur(img_config['augmentation']['blur_size'])
+			transforms.GaussianBlur(augmentation_config['blur_size'])
 			)
 
 	all_transforms += [
@@ -87,5 +88,14 @@ def get_transform(config):
 		transforms.Normalize(mean=[0.4711275, 0.44754702, 0.40802705],
 							std=[0.24383631, 0.23895378, 0.24194406]),
 	]
+
+	if augmentation_config['do_erasing']:
+		print("here")
+		all_transforms.append(
+			transforms.RandomErasing(
+				p=augmentation_config['erasing_probability'], 
+				scale=augmentation_config['erasing_scale']
+			)
+		)
 
 	return transforms.Compose(all_transforms)
