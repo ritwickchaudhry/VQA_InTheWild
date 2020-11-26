@@ -7,6 +7,7 @@ import torch.utils.data as data
 import torchvision.transforms as transforms
 from PIL import Image
 
+from custom_transforms import RandomResizedCrop
 
 IMG_EXTENSIONS = [
 	'.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -68,7 +69,6 @@ def get_transform(config):
 
 	if augmentation_config['do_crop']:
 		all_transforms.append(
-			# transforms.RandomResizedCrop( 
 			RandomResizedCrop(
 				img_size,
 				scale = augmentation_config['crop_scale'],
@@ -90,7 +90,6 @@ def get_transform(config):
 	]
 
 	if augmentation_config['do_erasing']:
-		print("here")
 		all_transforms.append(
 			transforms.RandomErasing(
 				p=augmentation_config['erasing_probability'], 

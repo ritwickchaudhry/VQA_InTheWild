@@ -22,12 +22,14 @@ images:
     save_transformed_sample: 0
     augmentation:
         # save_transformed_path: 
-        do_crop: False
-        do_blur: False
-        do_erasing: False
-        blur_size: 105
-        crop_scale: [0.6, 1.0]
+        do_crop: true
+        do_blur: true
+        do_erasing: true
+        blur_size: 55
+        crop_scale: [0.8, 1.0]
         crop_ratio: [0.75, 1.33]
+        erasing_probability: 0.3
+        erasing_scale: [0.05, 0.1]
 
 model:
 # Could be added new architectures and hyper-parameters like activations etc
@@ -61,7 +63,8 @@ training:
     epochs: 1
     data_workers: 0
     patience: 5
-    val_freq: 100
+    snap_freq: 2500
+    val_freq: 5000
 
 prediction:
     model_path: ./logs/vqa/2020-10-28_18:54:09/best_accuracy_log.pth

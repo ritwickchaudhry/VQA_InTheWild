@@ -87,7 +87,7 @@ def train(model, item, optimizer):
 
 	return acc, loss
 
-def evaluate(model, loader, tracker, tb_logger, epoch, split):
+def evaluate(model, loader, tracker, tb_logger, epoch, num_iter, split):
 	model.eval()
 	# tracker_class, tracker_params = tracker.MeanMonitor, {}
 	tracker_class = utils.AvgMonitor
@@ -141,8 +141,8 @@ def evaluate(model, loader, tracker, tb_logger, epoch, split):
 			# tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
 			tq.set_postfix(loss=fmt(loss_tracker.value), acc=fmt(acc_tracker.value))
 
-		tb_logger.add_scalar('val/loss', loss_tracker.value, global_step = epoch)
-		tb_logger.add_scalar('val/accuracy', 100.0 * acc_tracker.value, global_step = epoch)
+		tb_logger.add_scalar('val/loss', loss_tracker.value, global_step = num_iter)
+		tb_logger.add_scalar('val/accuracy', 100.0 * acc_tracker.value, global_step = num_iter)
 		predictions = list(torch.cat(predictions, dim=0))
 		accuracies = list(torch.cat(accuracies, dim=0))
 		samples_ids = list(torch.cat(samples_ids, dim=0))
@@ -243,9 +243,22 @@ def main():
 			# tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
 			tq.set_postfix(loss=fmt(loss_tracker.value), acc=fmt(acc_tracker.value))
 
+			num_iters = (len(tq) * i + batch_idx)
+			if num_iters != 0 and num_iters % config['training']['snap_freq'] == 0:
+				# Save logs after every k iters
+				log_data = {
+					'iter': len(tq) * i + batch_idx,
+					'config': config,
+					'weights': model.state_dict(),
+					'vocabs': train_loader.dataset.vocabs,
+				}
+				iter_log_path = os.path.join(path_log_dir, 'iter_{}_log.pth'.format(num_iters))
+				torch.save(log_data, iter_log_path)
+
+
 			# If we are training on the train split (and not on train+val) we can evaluate on val
-			if config['training']['train_split'] == 'train' and batch_idx != 0 and batch_idx % config['training']['val_freq'] == 0:
-				eval_results = evaluate(model, val_loader, tracker, tb_logger, epoch=i, split='val')
+			if config['training']['train_split'] == 'train' and num_iters != 0 and num_iters % config['training']['val_freq'] == 0:
+				eval_results = evaluate(model, val_loader, tracker, tb_logger, i, num_iters, split='val')
 				# Anneal LR and log it
 				scheduler.step(eval_results['avg_accuracy'])
 				tb_logger.add_scalar('LR', optimizer.param_groups[0]['lr'], global_step = i)
@@ -258,10 +271,6 @@ def main():
 					'vocabs': train_loader.dataset.vocabs,
 				}
 
-				# Save logs after every epoch
-				epoch_log_path = os.path.join(path_log_dir, 'epoch_{}_log.pth'.format(i))
-				torch.save(log_data, epoch_log_path)
-
 				# save logs for min validation loss and max validation accuracy
 				if eval_results['avg_loss'] < min_loss:
 					torch.save(log_data, path_best_loss)  # save model
@@ -270,16 +279,6 @@ def main():
 				if eval_results['avg_accuracy'] > max_accuracy:
 					torch.save(log_data, path_best_accuracy)  # save model
 					max_accuracy = eval_results['avg_accuracy']  # update max accuracy value
-
-	# # Save final model
-	# log_data = {
-	# 	'config': config,
-	# 	'weights': model.state_dict(),
-	# 	'vocabs': train_loader.dataset.vocabs,
-	# }
-
-	# path_final_log = os.path.join(path_log_dir, 'final_log.pth')
-	# torch.save(log_data, path_final_log)
 
 
 if __name__ == '__main__':
