@@ -56,51 +56,36 @@ def load_weights(model, config):
 		print("Model Initialization Complete")
 		print("--*--" * 8)
 
-def train(model, loader, optimizer, tracker, tb_logger, epoch, split):
+def train(model, item, optimizer):
 	model.train()
-	# tracker_class, tracker_params = tracker.MovingMeanMonitor, {'momentum': 0.99}
-	tracker_class = utils.AvgMonitor
-	tq = tqdm(loader, desc='{} E{:03d}'.format(split, epoch), ncols=0)
-	# loss_tracker = tracker.track('{}_loss'.format(split), tracker_class(**tracker_params))
-	# acc_tracker = tracker.track('{}_acc'.format(split), tracker_class(**tracker_params))
-	loss_tracker = tracker_class()
-	acc_tracker = tracker_class()
 	log_softmax = nn.LogSoftmax(dim=1).cuda()
 
-	for batch_idx, item in enumerate(tq):
-		v = item['visual']
-		q = item['question']
-		a = item['answer']
-		q_length = item['q_length']
-		
-		v = Variable(v.cuda(async=True))
-		q = Variable(q.cuda(async=True))
-		a = Variable(a.cuda(async=True))
-		q_length = Variable(q_length.cuda(async=True))
+	# tracker_class, tracker_params = tracker.MovingMeanMonitor, {'momentum': 0.99}
 
-		out = model(v, q, q_length)
+	v = item['visual']
+	q = item['question']
+	a = item['answer']
+	q_length = item['q_length']
 
-		# This is the Soft-loss described in https://arxiv.org/pdf/1708.00584.pdf
+	v = Variable(v.cuda(async=True))
+	q = Variable(q.cuda(async=True))
+	a = Variable(a.cuda(async=True))
+	q_length = Variable(q_length.cuda(async=True))
 
-		nll = -log_softmax(out)
+	out = model(v, q, q_length)
 
-		loss = (nll * a / 10).sum(dim=1).mean()
-		acc = utils.vqa_accuracy(out.data, a.data).cpu()
+	# This is the Soft-loss described in https://arxiv.org/pdf/1708.00584.pdf
 
-		optimizer.zero_grad()
-		loss.backward()
-		optimizer.step()
+	nll = -log_softmax(out)
 
-		# loss_tracker.append(loss.item())
-		# acc_tracker.append(acc.mean())
-		loss_tracker.update(loss.item(), v.shape[0])
-		acc_tracker.update(acc.mean(), v.shape[0])
-		tb_logger.add_scalar('train/loss', loss.item(), global_step = len(tq) * epoch + batch_idx)
-		tb_logger.add_scalar('train/accuracy', 100.0 * acc.mean(), global_step = len(tq) * epoch + batch_idx)
-		fmt = '{:.4f}'.format
-		# tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
-		tq.set_postfix(loss=fmt(loss_tracker.value), acc=fmt(acc_tracker.value))
+	loss = (nll * a / 10).sum(dim=1).mean()
+	acc = utils.vqa_accuracy(out.data, a.data).cpu()
 
+	optimizer.zero_grad()
+	loss.backward()
+	optimizer.step()
+
+	return acc, loss
 
 def evaluate(model, loader, tracker, tb_logger, epoch, split):
 	model.eval()
@@ -236,36 +221,55 @@ def main():
 		'vocabs': train_loader.dataset.vocabs,
 	}
 	torch.save(log_data, path_init)  # save model
+	split = config['training']['train_split']
 
 	for i in range(config['training']['epochs']):
-		train(model, train_loader, optimizer, tracker, tb_logger, epoch=i, split=config['training']['train_split'])
-		# If we are training on the train split (and not on train+val) we can evaluate on val
-		if config['training']['train_split'] == 'train':
-			eval_results = evaluate(model, val_loader, tracker, tb_logger, epoch=i, split='val')
-			# Anneal LR and log it
-			scheduler.step(eval_results['avg_accuracy'])
-			tb_logger.add_scalar('LR', optimizer.param_groups[0]['lr'], global_step = i)
-			# save all the information in the log file
-			log_data = {
-				'epoch': i,
-				'config': config,
-				'weights': model.state_dict(),
-				'eval_results': eval_results,
-				'vocabs': train_loader.dataset.vocabs,
-			}
+		tq = tqdm(train_loader, desc='{} E{:03d}'.format(split, i), ncols=0)
 
-			# Save logs after every epoch
-			epoch_log_path = os.path.join(path_log_dir, 'epoch_{}_log.pth'.format(i))
-			torch.save(log_data, epoch_log_path)
+		for batch_idx, item in enumerate(tq):
+			tracker_class = utils.AvgMonitor
+			loss_tracker = tracker_class()
+			acc_tracker = tracker_class()
+			
+			v = item['visual']
+			
+			acc, loss = train(model, item, optimizer)
+			
+			loss_tracker.update(loss.item(), v.shape[0])
+			acc_tracker.update(acc.mean(), v.shape[0])
+			tb_logger.add_scalar('train/loss', loss.item(), global_step = len(tq) * i + batch_idx)
+			tb_logger.add_scalar('train/accuracy', 100.0 * acc.mean(), global_step = len(tq) * i + batch_idx)
+			fmt = '{:.4f}'.format
+			# tq.set_postfix(loss=fmt(loss_tracker.mean.value), acc=fmt(acc_tracker.mean.value))
+			tq.set_postfix(loss=fmt(loss_tracker.value), acc=fmt(acc_tracker.value))
 
-			# save logs for min validation loss and max validation accuracy
-			if eval_results['avg_loss'] < min_loss:
-				torch.save(log_data, path_best_loss)  # save model
-				min_loss = eval_results['avg_loss']  # update min loss value
+			# If we are training on the train split (and not on train+val) we can evaluate on val
+			if config['training']['train_split'] == 'train' and batch_idx != 0 and batch_idx % config['training']['val_freq'] == 0:
+				eval_results = evaluate(model, val_loader, tracker, tb_logger, epoch=i, split='val')
+				# Anneal LR and log it
+				scheduler.step(eval_results['avg_accuracy'])
+				tb_logger.add_scalar('LR', optimizer.param_groups[0]['lr'], global_step = i)
+				# save all the information in the log file
+				log_data = {
+					'epoch': i,
+					'config': config,
+					'weights': model.state_dict(),
+					'eval_results': eval_results,
+					'vocabs': train_loader.dataset.vocabs,
+				}
 
-			if eval_results['avg_accuracy'] > max_accuracy:
-				torch.save(log_data, path_best_accuracy)  # save model
-				max_accuracy = eval_results['avg_accuracy']  # update max accuracy value
+				# Save logs after every epoch
+				epoch_log_path = os.path.join(path_log_dir, 'epoch_{}_log.pth'.format(i))
+				torch.save(log_data, epoch_log_path)
+
+				# save logs for min validation loss and max validation accuracy
+				if eval_results['avg_loss'] < min_loss:
+					torch.save(log_data, path_best_loss)  # save model
+					min_loss = eval_results['avg_loss']  # update min loss value
+
+				if eval_results['avg_accuracy'] > max_accuracy:
+					torch.save(log_data, path_best_accuracy)  # save model
+					max_accuracy = eval_results['avg_accuracy']  # update max accuracy value
 
 	# # Save final model
 	# log_data = {

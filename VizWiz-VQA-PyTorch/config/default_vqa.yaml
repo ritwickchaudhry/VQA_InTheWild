@@ -24,12 +24,10 @@ images:
         # save_transformed_path: 
         do_crop: False
         do_blur: False
-        do_erasing: True
+        do_erasing: False
         blur_size: 105
         crop_scale: [0.6, 1.0]
         crop_ratio: [0.75, 1.33]
-        erasing_probability: 1
-        erasing_scale: [0.01, 0.1]
 
 model:
 # Could be added new architectures and hyper-parameters like activations etc
@@ -60,9 +58,10 @@ training:
     train_split: train
     lr: 0.001
     batch_size: 32
-    epochs: 2
+    epochs: 1
     data_workers: 0
     patience: 5
+    val_freq: 100
 
 prediction:
     model_path: ./logs/vqa/2020-10-28_18:54:09/best_accuracy_log.pth

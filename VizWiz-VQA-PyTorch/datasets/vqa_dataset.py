@@ -75,17 +75,17 @@ class VQA_Pretrain_Dataset(data.Dataset):
         with open(path_ques, 'r') as fd:
             self.questions_bank = json.load(fd)
 
-        # self.questions = prepare_questions_pretrain(self.annotations, self.questions_bank)
-        # self.questions = [encode_question(q, self.token_to_index, self.max_question_length) for q in
-        #                   self.questions]  # encode questions and return question and question lenght
-        # # answers
-        # if self.split != 'test':
-        #     self.answers = prepare_answers(self.annotations)
-        #     self.answers = [encode_answers(a, self.answer_to_index) for a in
-        #                     self.answers]  # create a sparse vector of len(self.answer_to_index) for each question containing the occurances of each answer
+        self.questions = prepare_questions_pretrain(self.annotations, self.questions_bank)
+        self.questions = [encode_question(q, self.token_to_index, self.max_question_length) for q in
+                          self.questions]  # encode questions and return question and question lenght
+        # answers
+        if self.split != 'test':
+            self.answers = prepare_answers(self.annotations)
+            self.answers = [encode_answers(a, self.answer_to_index) for a in
+                            self.answers]  # create a sparse vector of len(self.answer_to_index) for each question containing the occurances of each answer
         
-        # if self.split == "train" or self.split == "trainval":
-        #     self._filter_unanswerable_samples()
+        if self.split == "train" or self.split == "trainval":
+            self._filter_unanswerable_samples()
 
         # images
         self.name_to_id = dict()
