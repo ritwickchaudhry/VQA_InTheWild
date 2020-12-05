@@ -15,6 +15,10 @@ from datasets import vqa_dataset
 
 from torch.utils.tensorboard import SummaryWriter
 
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
 def load_weights(model, config):
 	if config['use_pretrained'] is False:
 		return
@@ -32,7 +36,7 @@ def load_weights(model, config):
 			if config['transfer_image_feature_extractor']:
 				print("--*--" * 8)
 				print("Loading the Image Feature Extractor weights")
-				image_feature_extractor_weights = {'.'.join(k.split('.')[1:]) : v for k,v in dict_weights.items() \
+				image_feature_extractor_weights = {'.'.join(k.split('.')[2:]) : v for k,v in dict_weights.items() \
 									 if 'image_feature_extractor' in k}
 				model.image_feature_extractor.load_state_dict(image_feature_extractor_weights)
 				if config['freeze_image_feature_extractor']:
@@ -43,7 +47,7 @@ def load_weights(model, config):
 			if config['transfer_attention_network']:
 				print("--*--" * 8)
 				print("Loading the Attention Network weights")
-				attention_network_weights = {'.'.join(k.split('.')[1:]) : v for k,v in dict_weights.items() \
+				attention_network_weights = {'.'.join(k.split('.')[2:]) : v for k,v in dict_weights.items() \
 									 if 'attention' in k}
 				model.attention.load_state_dict(attention_network_weights)
 				if config['freeze_attention_network']:
@@ -193,14 +197,15 @@ def main():
 	train_loader = vqa_dataset.get_loader(config, split='train')
 	val_loader = vqa_dataset.get_loader(config, split='val')
 	print('Got Loader')
-	# model = nn.DataParallel(models.Model(config, train_loader.dataset.num_tokens)).cuda()
+	
+	# model = nn.DataParallel(models.Model(config, train_loader.dataset.num_tokens), device_ids=[0]).cuda()
 	model = models.Model(config, train_loader.dataset.num_tokens).cuda()
-
 	optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
 								 config['training']['lr'])
 
 	# Load model weights if necessary
 	load_weights(model, config['model']['pretrained'])
+	model = nn.DataParallel(model, device_ids=[0])
 
 	tracker = utils.Tracker()
 

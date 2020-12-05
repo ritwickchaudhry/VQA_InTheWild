@@ -56,11 +56,11 @@ def main():
     # Benchmark mode is good whenever your input sizes for your network do not vary
     cudnn.benchmark = True
 
-    net = NetFeatureExtractor().cuda()
+    net = NetFeatureExtractor() #.cuda()
     net.eval()
     # Resize, Crop, Normalize
     transform = get_transform(config)
-    dataset = ImageDataset(config['images']['dir'], transform=transform)
+    dataset = ImageDataset(config['images']['dir'], transform=None) # Temporarily None
 
     data_loader = torch.utils.data.DataLoader(
         dataset,
@@ -72,7 +72,7 @@ def main():
 
     h5_file = h5py.File(config['images']['path_features'], 'w')
 
-    dummy_input = Variable(torch.ones(1, 3, config['images']['img_size'], config['images']['img_size']), volatile=True).cuda()
+    dummy_input = Variable(torch.ones(1, 3, config['images']['img_size'], config['images']['img_size']), volatile=True) #.cuda()
     _, dummy_output = net(dummy_input)
 
     att_features_shape = (
@@ -101,10 +101,10 @@ def main():
 
     print('Extracting features ...')
     idx = 0
-    delta = config['preprocess_batch_size']
+    delta = config['images']['preprocess_batch_size']
 
     for i, inputs in enumerate(tqdm(data_loader)):
-        inputs_img = Variable(inputs['visual'].cuda(async=True), volatile=True)
+        inputs_img = Variable(inputs['visual'], volatile=True) #.cuda(async=True)
         no_att_feat, att_feat = net(inputs_img)
 
         # bn, out_size, H, W = att_feat.shape
@@ -128,7 +128,7 @@ def main():
     end = time.time() - begin
 
     print('Finished in {}m and {}s'.format(int(end / 60), int(end % 60)))
-    print('Created file : ' + config['path_features'])
+    print('Created file : ' + config['images']['path_features'])
 
 
 if __name__ == '__main__':

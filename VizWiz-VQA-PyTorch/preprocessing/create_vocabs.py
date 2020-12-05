@@ -81,7 +81,7 @@ def main():
         'answer': answer_vocab,
     }
 
-    with open(config['annotations']['path_vocabs'], 'w') as fd:
+    with open(config['annotations']['path_vocabs'], 'w+') as fd:
         json.dump(vocabs, fd)
 
     print("vocabs saved in {}".format(config['annotations']['path_vocabs']))
